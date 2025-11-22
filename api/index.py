@@ -300,10 +300,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             font-size: 18px;
             font-weight: bold;
             color: #ffffff;
-            text-shadow: 0 0 4px rgba(255,255,255,0.3);
             display: block;
             text-align: center;
             margin-top: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .range-box:hover .range-value {
+            text-shadow: 0 0 8px currentColor;
         }
 
         .range-first .range-value {
@@ -315,6 +319,214 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         .range-15min .range-value {
+            color: #27ae60;
+        }
+
+        /* Enhanced Toggle Effects */
+        .range-box {
+            padding: 8px;
+            border-radius: 4px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .range-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, transparent, rgba(255,255,255,0.1));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .range-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .range-box:hover::before {
+            opacity: 1;
+        }
+
+        .range-box.active {
+            transform: scale(1.15);
+            z-index: 10;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+        }
+
+        .range-first.active {
+            box-shadow: 0 8px 30px rgba(231, 76, 60, 0.4);
+            border: 2px solid rgba(231, 76, 60, 0.6);
+        }
+
+        .range-5min.active {
+            box-shadow: 0 8px 30px rgba(52, 152, 219, 0.4);
+            border: 2px solid rgba(52, 152, 219, 0.6);
+        }
+
+        .range-15min.active {
+            box-shadow: 0 8px 30px rgba(39, 174, 96, 0.4);
+            border: 2px solid rgba(39, 174, 96, 0.6);
+        }
+
+        .range-box.active .range-value {
+            font-size: 20px;
+            text-shadow: 0 0 8px currentColor;
+        }
+
+        .range-box.active::after {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, transparent, currentColor, transparent);
+            opacity: 0.3;
+            border-radius: 6px;
+            z-index: -1;
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(200%) rotate(45deg); }
+        }
+
+        /* Initial State Management */
+        .charts-container {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+
+        .charts-container.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .chart-section {
+            opacity: 0;
+            transform: translateY(30px) scale(0.95);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+
+        .chart-section.visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .chart-section:nth-child(1).visible {
+            transition-delay: 0.1s;
+        }
+
+        .chart-section:nth-child(2).visible {
+            transition-delay: 0.2s;
+        }
+
+        .chart-section:nth-child(3).visible {
+            transition-delay: 0.3s;
+        }
+
+        .chart-controls {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .chart-controls.visible {
+            opacity: 1;
+        }
+
+        /* Welcome State */
+        .welcome-state {
+            text-align: center;
+            padding: 60px 20px;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        .welcome-state.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .welcome-state h2 {
+            color: #ffffff;
+            font-size: 28px;
+            margin-bottom: 20px;
+            text-shadow: 0 2px 10px rgba(255,255,255,0.2);
+        }
+
+        .welcome-state p {
+            color: #cccccc;
+            font-size: 16px;
+            margin-bottom: 30px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.6;
+        }
+
+        .welcome-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* Enhanced Loading State */
+        .loading-enhanced {
+            text-align: center;
+            padding: 40px;
+            color: #ffffff;
+            font-size: 16px;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 20px;
+            border: 4px solid rgba(255,255,255,0.2);
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-steps {
+            text-align: left;
+            max-width: 300px;
+            margin: 20px auto 0;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .loading-step {
+            margin-bottom: 8px;
+            opacity: 0.6;
+            transition: opacity 0.3s ease;
+        }
+
+        .loading-step.active {
+            opacity: 1;
+            color: #3498db;
+        }
+
+        .loading-step.completed {
+            opacity: 1;
             color: #27ae60;
         }
 
@@ -367,9 +579,39 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </div>
 
     <div id="error" class="error" style="display: none;"></div>
-    <div id="loading" class="loading" style="display: none;">Loading charts...</div>
+    <div id="loading" class="loading-enhanced" style="display: none;">
+        <div class="loading-spinner"></div>
+        <div>Analyzing market data...</div>
+        <div class="loading-steps">
+            <div class="loading-step" id="step-fetch">📊 Fetching market data</div>
+            <div class="loading-step" id="step-process">📈 Processing timeframes</div>
+            <div class="loading-step" id="step-analyze">🔍 Calculating ranges</div>
+            <div class="loading-step" id="step-generate">⚡ Generating charts</div>
+        </div>
+    </div>
 
-    <div class="charts-container">
+    <!-- Welcome State -->
+    <div id="welcomeState" class="welcome-state">
+        <div class="welcome-icon">📈</div>
+        <h2>MNQ Futures Trading Analysis</h2>
+        <p>Select a trading date to generate comprehensive multi-timeframe charts with opening range analysis. Get instant insights into market movements and trading opportunities.</p>
+        <div style="display: flex; justify-content: center; gap: 20px; margin-top: 30px;">
+            <div style="text-align: center;">
+                <div style="font-size: 24px; margin-bottom: 8px;">⚡</div>
+                <div style="font-size: 12px; color: #aaa;">Real-time Data</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 24px; margin-bottom: 8px;">📊</div>
+                <div style="font-size: 12px; color: #aaa;">3 Timeframes</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 24px; margin-bottom: 8px;">🎯</div>
+                <div style="font-size: 12px; color: #aaa;">Range Analysis</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="charts-container" id="chartsContainer">
         <div class="chart-section">
             <div class="chart-title">30-Second Chart</div>
             <div class="chart-controls">
@@ -531,7 +773,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             document.getElementById('date').value = targetDate.toISOString().split('T')[0];
         }
 
-        // Generate charts
+        // Generate charts with enhanced UX
         async function generateCharts() {
             const date = document.getElementById('date').value;
 
@@ -541,11 +783,26 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             }
 
             hideError();
-            showLoading(true);
             document.getElementById('generateBtn').disabled = true;
 
+            // Show welcome state transition
+            const welcomeState = document.getElementById('welcomeState');
+            if (welcomeState && !welcomeState.classList.contains('hidden')) {
+                welcomeState.classList.add('hidden');
+                setTimeout(() => {
+                    showEnhancedLoading();
+                }, 300);
+            } else {
+                showEnhancedLoading();
+            }
+
             try {
+                // Update loading steps
+                updateLoadingStep('step-fetch', 'active');
+
                 const response = await fetch(`/api/mnq-data?date=${date}`);
+                updateLoadingStep('step-fetch', 'completed');
+                updateLoadingStep('step-process', 'active');
 
                 if (!response.ok) {
                     const errorData = await response.json();
@@ -553,27 +810,101 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 }
 
                 const data = await response.json();
+                updateLoadingStep('step-process', 'completed');
+                updateLoadingStep('step-analyze', 'active');
 
                 // Store chart data globally for toggle listeners
                 window.currentChartData = data.data;
 
                 // Calculate ranges
                 const ranges = calculateRanges(data.data);
+                updateLoadingStep('step-analyze', 'completed');
+                updateLoadingStep('step-generate', 'active');
 
-                // Create charts
-                createChart('chart30s', data.data['30s'], ranges, '30s');
-                createChart('chart5m', data.data['5m'], ranges, '5m');
-                createChart('chart15m', data.data['15m'], ranges, '15m');
+                // Hide loading and show charts with animation
+                showEnhancedLoading(false);
 
-                // Update range info
-                updateRangeInfo(ranges);
+                // Small delay for smooth transition
+                setTimeout(() => {
+                    // Show charts container
+                    const chartsContainer = document.getElementById('chartsContainer');
+                    chartsContainer.classList.add('visible');
+
+                    // Create charts sequentially with animation
+                    setTimeout(() => {
+                        createChart('chart30s', data.data['30s'], ranges, '30s');
+                        document.getElementById('chart30s').parentElement.classList.add('visible');
+                        document.getElementById('chart30s').parentElement.querySelector('.chart-controls').classList.add('visible');
+                    }, 100);
+
+                    setTimeout(() => {
+                        createChart('chart5m', data.data['5m'], ranges, '5m');
+                        document.getElementById('chart5m').parentElement.classList.add('visible');
+                        document.getElementById('chart5m').parentElement.querySelector('.chart-controls').classList.add('visible');
+                    }, 200);
+
+                    setTimeout(() => {
+                        createChart('chart15m', data.data['15m'], ranges, '15m');
+                        document.getElementById('chart15m').parentElement.classList.add('visible');
+                        document.getElementById('chart15m').parentElement.querySelector('.chart-controls').classList.add('visible');
+                    }, 300);
+
+                    // Update range info and apply active effects
+                    setTimeout(() => {
+                        updateRangeInfo(ranges);
+                        applyActiveToggleEffects();
+                    }, 400);
+                }, 100);
 
             } catch (error) {
+                showEnhancedLoading(false);
                 showError(`Error: ${error.message}`);
             } finally {
-                showLoading(false);
                 document.getElementById('generateBtn').disabled = false;
             }
+        }
+
+        function showEnhancedLoading(show = true) {
+            const loading = document.getElementById('loading');
+            loading.style.display = show ? 'block' : 'none';
+
+            if (show) {
+                // Reset loading steps
+                document.querySelectorAll('.loading-step').forEach(step => {
+                    step.classList.remove('active', 'completed');
+                });
+            }
+        }
+
+        function updateLoadingStep(stepId, status) {
+            const step = document.getElementById(stepId);
+            if (step) {
+                step.classList.remove('active', 'completed');
+                step.classList.add(status);
+            }
+        }
+
+        function applyActiveToggleEffects() {
+            const timeframes = ['30s', '5m', '15m'];
+
+            timeframes.forEach(timeframe => {
+                const showFirst = document.getElementById(`showFirst-${timeframe}`)?.checked ?? true;
+                const show5min = document.getElementById(`show5min-${timeframe}`)?.checked ?? true;
+                const show15min = document.getElementById(`show15min-${timeframe}`)?.checked ?? true;
+
+                const rangeBoxes = document.querySelectorAll(`#chart${timeframe === '30s' ? '30s' : timeframe === '5m' ? '5m' : '15m'} ~ .range-info .range-box`);
+
+                rangeBoxes.forEach((box, index) => {
+                    const ranges = ['first', '5min', '15min'];
+                    const isActive = (index === 0 && showFirst) || (index === 1 && show5min) || (index === 2 && show15min);
+
+                    if (isActive) {
+                        box.classList.add('active');
+                    } else {
+                        box.classList.remove('active');
+                    }
+                });
+            });
         }
 
         function calculateRanges(data) {
@@ -962,6 +1293,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                             if (chartData) {
                                 const currentRanges = calculateRanges(chartData);
                                 createChart(`chart${timeframe}`, chartData[timeframe], currentRanges, timeframe);
+                                // Apply active toggle effects after chart recreation
+                                setTimeout(() => applyActiveToggleEffects(), 100);
                             }
                         });
                     }
