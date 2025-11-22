@@ -6,7 +6,7 @@ import pytz
 
 app = Flask(__name__)
 
-# Vercel serverless handler - FIXED VERSION
+# Standard Vercel serverless handler
 def handler(environ, start_response):
     """Vercel serverless function handler"""
     return app(environ, start_response)
@@ -91,7 +91,6 @@ def process_timeframe(df, minutes):
         return df.to_dict('records')
 
     df_temp = df.set_index('timestamp')
-    # Fixed deprecation warning
     df_resampled = df_temp.resample(f'{minutes}min').agg({
         'open': 'first',
         'high': 'max',
@@ -140,6 +139,7 @@ def create_30second_data(df):
         })
 
     return candles_30s
+
 # Add this for local testing
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
