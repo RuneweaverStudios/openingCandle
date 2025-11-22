@@ -13,9 +13,8 @@ except ImportError:
 
 app = Flask(__name__)
 
-# HTML template for the main page
-HTML_TEMPLATE = """
-<!DOCTYPE html>
+# HTML template for the main page - Complete trading charts interface
+HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -769,8 +768,7 @@ HTML_TEMPLATE = """
         addToggleListeners();
     </script>
 </body>
-</html>
-"""
+</html>"""
 
 @app.route('/')
 def home():
