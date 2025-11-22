@@ -295,8 +295,6 @@ def home():
             const pacificTime = new Date(utc - 480 * 60000); // UTC-8 for Pacific
             const dayOfWeek = pacificTime.getDay();
 
-            // If it's evening in Pacific (after market close), use today
-            // If it's morning before market close or weekend, use last trading day
             let targetDate = new Date(pacificTime);
 
             // If weekend, go back to Friday
@@ -304,24 +302,6 @@ def home():
                 targetDate.setDate(targetDate.getDate() - 2);
             } else if (dayOfWeek === 6) { // Saturday
                 targetDate.setDate(targetDate.getDate() - 1);
-            }
-
-            // If it's Sunday evening after 6 PM PT, it might show Monday
-            // Let's check if the date is in the future and adjust if needed
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            targetDate.setHours(0, 0, 0, 0);
-
-            if (targetDate > today) {
-                // If the calculated date is in the future, use today
-                targetDate = today;
-                // If today is weekend, go back to Friday
-                const todayDayOfWeek = targetDate.getDay();
-                if (todayDayOfWeek === 0) { // Sunday
-                    targetDate.setDate(targetDate.getDate() - 2);
-                } else if (todayDayOfWeek === 6) { // Saturday
-                    targetDate.setDate(targetDate.getDate() - 1);
-                }
             }
 
             document.getElementById('date').value = targetDate.toISOString().split('T')[0];
@@ -341,7 +321,6 @@ def home():
             document.getElementById('generateBtn').disabled = true;
 
             try {
-                // Use relative URL for both local and Vercel deployment
                 const response = await fetch(`/api/mnq-data?date=${date}`);
 
                 if (!response.ok) {
