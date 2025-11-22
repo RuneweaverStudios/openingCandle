@@ -323,7 +323,7 @@
             document.getElementById('generateBtn').disabled = true;
 
             try {
-                const response = await fetch(`http://localhost:5001/api/mnq-data?date=${date}`);
+                const response = await fetch(`/api/mnq-data?date=${date}`);
 
                 if (!response.ok) {
                     const errorData = await response.json();
