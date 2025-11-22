@@ -1,3 +1,4 @@
+from flask import Flask, request, jsonify
 import json
 from datetime import datetime, timedelta
 
@@ -9,6 +10,8 @@ try:
     DEPENDENCIES_AVAILABLE = True
 except ImportError:
     DEPENDENCIES_AVAILABLE = False
+
+app = Flask(__name__)
 
 def get_market_data(target_date):
     """Fetch MNQ futures data from Yahoo Finance"""
@@ -149,102 +152,72 @@ def create_30second_data(df):
 
     return candles_30s
 
-def handler(request):
-    """Vercel serverless function with full yfinance functionality"""
+@app.route('/api/test', methods=['GET'])
+def test():
+    """Test endpoint with full yfinance functionality"""
+    return jsonify({
+        'status': 'success',
+        'message': 'Serverless function is working with full functionality!',
+        'dependencies_available': DEPENDENCIES_AVAILABLE,
+        'timestamp': datetime.now().isoformat()
+    })
 
-    # Get the path and query parameters
-    path = request.get('path', '')
-    method = request.get('method', 'GET')
-    query = request.get('query', {})
+@app.route('/api/mnq-data', methods=['GET'])
+def get_mnq_data():
+    """Fetch MNQ futures data from Yahoo Finance"""
+    try:
+        date_param = request.args.get('date')
 
-    if path == '/api/test':
-        return {
-            'statusCode': 200,
-            'headers': {'Content-Type': 'application/json'},
-            'body': json.dumps({
-                'status': 'success',
-                'message': 'Serverless function is working with full functionality!',
-                'method': method,
-                'path': path,
-                'dependencies_available': DEPENDENCIES_AVAILABLE,
-                'timestamp': datetime.now().isoformat()
-            })
-        }
+        pacific = pytz.timezone('America/Los_Angeles') if DEPENDENCIES_AVAILABLE else None
 
-    elif path == '/api/mnq-data':
-        try:
-            date_param = query.get('date', [None])[0] if isinstance(query.get('date'), list) else query.get('date')
-
-            pacific = pytz.timezone('America/Los_Angeles') if DEPENDENCIES_AVAILABLE else None
-
-            if date_param:
-                try:
-                    target_date = datetime.strptime(date_param, '%Y-%m-%d').date()
-                except ValueError:
-                    return {
-                        'statusCode': 400,
-                        'headers': {'Content-Type': 'application/json'},
-                        'body': json.dumps({
-                            'error': 'Invalid date format',
-                            'message': 'Use YYYY-MM-DD format'
-                        })
-                    }
+        if date_param:
+            try:
+                target_date = datetime.strptime(date_param, '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({
+                    'error': 'Invalid date format',
+                    'message': 'Use YYYY-MM-DD format'
+                }), 400
+        else:
+            if DEPENDENCIES_AVAILABLE and pacific:
+                target_date = datetime.now(pacific).date()
+                if target_date.weekday() >= 5:
+                    target_date = target_date - timedelta(days=target_date.weekday() - 4)
             else:
-                if DEPENDENCIES_AVAILABLE and pacific:
-                    target_date = datetime.now(pacific).date()
-                    if target_date.weekday() >= 5:
-                        target_date = target_date - timedelta(days=target_date.weekday() - 4)
-                else:
-                    target_date = datetime.now().date()
+                target_date = datetime.now().date()
 
-            market_data_result = get_market_data(target_date)
+        market_data_result = get_market_data(target_date)
 
-            if market_data_result.get('error'):
-                return {
-                    'statusCode': 404,
-                    'headers': {'Content-Type': 'application/json'},
-                    'body': json.dumps({
-                        'error': market_data_result['error'],
-                        'message': market_data_result['message'],
-                        'date': target_date.strftime('%Y-%m-%d'),
-                        'data': market_data_result['data']
-                    })
-                }
-
-            result = {
+        if market_data_result.get('error'):
+            return jsonify({
+                'error': market_data_result['error'],
+                'message': market_data_result['message'],
                 'date': target_date.strftime('%Y-%m-%d'),
-                'market_hours': {
-                    'open': '06:30:00',
-                    'close': '13:00:00',
-                    'timezone': 'America/Los_Angeles'
-                },
                 'data': market_data_result['data']
-            }
+            }), 404
 
-            return {
-                'statusCode': 200,
-                'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps(result)
-            }
-
-        except Exception as e:
-            return {
-                'statusCode': 500,
-                'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps({
-                    'error': 'Internal server error',
-                    'message': str(e),
-                    'data': {'30s': [], '5m': [], '15m': []}
-                })
-            }
-
-    else:
-        return {
-            'statusCode': 404,
-            'headers': {'Content-Type': 'application/json'},
-            'body': json.dumps({
-                'error': 'Not found',
-                'path': path,
-                'available_endpoints': ['/api/test', '/api/mnq-data']
-            })
+        result = {
+            'date': target_date.strftime('%Y-%m-%d'),
+            'market_hours': {
+                'open': '06:30:00',
+                'close': '13:00:00',
+                'timezone': 'America/Los_Angeles'
+            },
+            'data': market_data_result['data']
         }
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        return jsonify({
+            'error': 'Internal server error',
+            'message': str(e),
+            'data': {'30s': [], '5m': [], '15m': []}
+        }), 500
+
+# Vercel serverless handler for builds system
+def handler(environ, start_response):
+    return app(environ, start_response)
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5001)
