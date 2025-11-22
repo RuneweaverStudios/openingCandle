@@ -17,7 +17,18 @@ def handler(environ, start_response):
     return app(environ, start_response)
 
 
-@app.route('/api/mnq-data')
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """Health check endpoint for debugging"""
+    logger.info("Health check endpoint called")
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'version': '1.0.0'
+    })
+
+
+@app.route('/api/mnq-data', methods=['GET'])
 def get_mnq_data():
     """Fetch MNQ futures data from Yahoo Finance"""
     logger.info("API endpoint called")
