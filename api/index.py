@@ -3,6 +3,12 @@ import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta
 import pytz
+import logging
+import traceback
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
@@ -10,15 +16,14 @@ app = Flask(__name__)
 def handler(environ, start_response):
     return app(environ, start_response)
 
-@app.route('/')
-def home():
-    with open('index.html', 'r') as f:
-        return f.read()
 
 @app.route('/api/mnq-data')
 def get_mnq_data():
     """Fetch MNQ futures data from Yahoo Finance"""
+    logger.info("API endpoint called")
+
     date = request.args.get('date')
+    logger.info(f"Date parameter: {date}")
 
     pacific = pytz.timezone('America/Los_Angeles')
     if date:
@@ -84,6 +89,8 @@ def get_mnq_data():
         return jsonify(result)
 
     except Exception as e:
+        logger.error(f"Error in get_mnq_data: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return jsonify({'error': f'Error fetching data: {str(e)}'}), 500
 
 def process_timeframe(df, minutes):
