@@ -28,11 +28,28 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             padding: 20px;
             background-color: #1a1a1a;
             color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            width: 100%;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+
+        body.charts-visible {
+            justify-content: flex-start;
         }
 
         .header {
             text-align: center;
             margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #ffffff;
+            margin-bottom: 10px;
         }
 
         .controls {
@@ -75,14 +92,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         button:disabled {
             background-color: #666;
             cursor: not-allowed;
-        }
-
-        #exportBtn {
-            background-color: #28a745;
-        }
-
-        #exportBtn:hover {
-            background-color: #218838;
         }
 
         .chart-controls {
@@ -224,6 +233,141 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             background-color: #c82333;
         }
 
+        .widget-modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+        }
+
+        .widget-modal-content {
+            background-color: #2a2a2a;
+            margin: 2% auto;
+            padding: 20px;
+            border: 1px solid #444;
+            border-radius: 8px;
+            width: 800px;
+            max-width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            color: #ffffff;
+        }
+
+        .widget-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .widget-modal h2 {
+            margin: 0;
+            color: #ffffff;
+        }
+
+        .widget-body {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .widget-config {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .config-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .config-group label {
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 15px;
+        }
+
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: normal;
+            color: #cccccc;
+        }
+
+        .size-inputs {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .size-inputs input {
+            width: 80px;
+            padding: 4px 8px;
+            border: 1px solid #444;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            border-radius: 4px;
+        }
+
+        .size-inputs span {
+            color: #cccccc;
+        }
+
+        .widget-preview {
+            background-color: #1a1a1a;
+            border-radius: 4px;
+            padding: 15px;
+            min-height: 120px;
+        }
+
+        .widget-code {
+            grid-column: 1 / -1;
+        }
+
+        .widget-code h3 {
+            margin: 0 0 10px 0;
+            color: #ffffff;
+        }
+
+        .widget-actions {
+            grid-column: 1 / -1;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .widget-actions button {
+            padding: 8px 16px;
+            border: 1px solid #444;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .widget-actions button:hover {
+            background-color: #0066cc;
+        }
+
+        .widget-actions button.primary {
+            background-color: #0066cc;
+        }
+
+        .widget-actions button.primary:hover {
+            background-color: #0052a3;
+        }
+
         .export-container {
             margin-top: 20px;
             padding: 20px;
@@ -241,9 +385,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .charts-container {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 30px;
-            max-width: 1400px;
-            margin: 0 auto;
+            gap: 20px;
+            width: 100%;
+            margin: 0;
+            padding: 0;
         }
 
         .chart-section {
@@ -251,6 +396,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             border-radius: 8px;
             padding: 20px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
         }
 
         .chart-title {
@@ -261,7 +409,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         .chart {
-            height: 400px;
+            height: 60vh;
+            min-height: 400px;
         }
 
         .range-info {
@@ -299,7 +448,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .range-value {
             font-size: 18px;
             font-weight: bold;
-            color: #ffffff;
+            color: #e8e8e8;
             display: block;
             text-align: center;
             margin-top: 5px;
@@ -307,244 +456,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         .range-box:hover .range-value {
-            text-shadow: 0 0 8px currentColor;
+            text-shadow: 0 0 8px #e8e8e8;
         }
 
-        .range-first .range-value {
-            color: #e74c3c;
-        }
-
-        .range-5min .range-value {
-            color: #3498db;
-        }
-
-        .range-15min .range-value {
-            color: #27ae60;
-        }
-
-        /* Enhanced Toggle Effects */
-        .range-box {
-            padding: 8px;
-            border-radius: 4px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .range-box::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, transparent, rgba(255,255,255,0.1));
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            pointer-events: none;
-        }
-
-        .range-box:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-        }
-
-        .range-box:hover::before {
-            opacity: 1;
-        }
-
-        .range-box.active {
-            transform: scale(1.15);
-            z-index: 10;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.4);
-        }
-
-        .range-first.active {
-            box-shadow: 0 8px 30px rgba(231, 76, 60, 0.4);
-            border: 2px solid rgba(231, 76, 60, 0.6);
-        }
-
-        .range-5min.active {
-            box-shadow: 0 8px 30px rgba(52, 152, 219, 0.4);
-            border: 2px solid rgba(52, 152, 219, 0.6);
-        }
-
-        .range-15min.active {
-            box-shadow: 0 8px 30px rgba(39, 174, 96, 0.4);
-            border: 2px solid rgba(39, 174, 96, 0.6);
-        }
-
-        .range-box.active .range-value {
-            font-size: 20px;
-            text-shadow: 0 0 8px currentColor;
-        }
-
-        .range-box.active::after {
-            content: '';
-            position: absolute;
-            top: -2px;
-            left: -2px;
-            right: -2px;
-            bottom: -2px;
-            background: linear-gradient(45deg, transparent, currentColor, transparent);
-            opacity: 0.3;
-            border-radius: 6px;
-            z-index: -1;
-            animation: shimmer 2s infinite;
-        }
-
-        @keyframes shimmer {
-            0% { transform: translateX(-100%) rotate(45deg); }
-            100% { transform: translateX(200%) rotate(45deg); }
-        }
-
-        /* Initial State Management */
-        .charts-container {
-            opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.5s ease, transform 0.5s ease;
-        }
-
-        .charts-container.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .chart-section {
-            opacity: 0;
-            transform: translateY(30px) scale(0.95);
-            transition: opacity 0.4s ease, transform 0.4s ease;
-        }
-
-        .chart-section.visible {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
-
-        .chart-section:nth-child(1).visible {
-            transition-delay: 0.1s;
-        }
-
-        .chart-section:nth-child(2).visible {
-            transition-delay: 0.2s;
-        }
-
-        .chart-section:nth-child(3).visible {
-            transition-delay: 0.3s;
-        }
-
-        .chart-controls {
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .chart-controls.visible {
-            opacity: 1;
-        }
-
-        /* Welcome State */
-        .welcome-state {
-            text-align: center;
-            padding: 60px 20px;
-            opacity: 1;
-            transition: opacity 0.3s ease;
-        }
-
-        .welcome-state.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .welcome-state h2 {
-            color: #ffffff;
-            font-size: 28px;
-            margin-bottom: 20px;
-            text-shadow: 0 2px 10px rgba(255,255,255,0.2);
-        }
-
-        .welcome-state p {
-            color: #cccccc;
-            font-size: 16px;
-            margin-bottom: 30px;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-            line-height: 1.6;
-        }
-
-        .welcome-icon {
-            font-size: 48px;
-            margin-bottom: 20px;
-            animation: float 3s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-
-        /* Enhanced Loading State */
-        .loading-enhanced {
-            text-align: center;
-            padding: 40px;
-            color: #ffffff;
-            font-size: 16px;
-        }
-
-        .loading-spinner {
-            width: 40px;
-            height: 40px;
-            margin: 0 auto 20px;
-            border: 4px solid rgba(255,255,255,0.2);
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .loading-steps {
-            text-align: left;
-            max-width: 300px;
-            margin: 20px auto 0;
-            font-size: 14px;
-            line-height: 1.8;
-        }
-
-        .loading-step {
-            margin-bottom: 8px;
-            opacity: 0.6;
-            transition: opacity 0.3s ease;
-        }
-
-        .loading-step.active {
-            opacity: 1;
-            color: #3498db;
-        }
-
-        .loading-step.completed {
-            opacity: 1;
-            color: #27ae60;
-        }
-
-        .range-5min {
-            border-left: 4px solid #3498db;
-            background-color: rgba(52, 152, 219, 0.1);
-        }
-
-        .range-15min {
-            border-left: 4px solid #27ae60;
-            background-color: rgba(39, 174, 96, 0.1);
-        }
-
-        .range-first {
-            border-left: 4px solid #e74c3c;
-            background-color: rgba(231, 76, 60, 0.1);
-        }
-
+  
+        
+        
+        
         .loading {
             text-align: center;
             color: #ffffff;
@@ -573,49 +491,18 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <label for="date">Trading Date:</label>
             <input type="date" id="date">
         </div>
-
         <button onclick="generateCharts()" id="generateBtn">Generate Charts</button>
         <button onclick="exportAllCharts()" id="exportBtn">Export All Charts</button>
+        <button onclick="openWidgetModal()" id="widgetBtn">Create Widget</button>
     </div>
 
     <div id="error" class="error" style="display: none;"></div>
-    <div id="loading" class="loading-enhanced" style="display: none;">
-        <div class="loading-spinner"></div>
-        <div>Analyzing market data...</div>
-        <div class="loading-steps">
-            <div class="loading-step" id="step-fetch">📊 Fetching market data</div>
-            <div class="loading-step" id="step-process">📈 Processing timeframes</div>
-            <div class="loading-step" id="step-analyze">🔍 Calculating ranges</div>
-            <div class="loading-step" id="step-generate">⚡ Generating charts</div>
-        </div>
-    </div>
-
-    <!-- Welcome State -->
-    <div id="welcomeState" class="welcome-state">
-        <div class="welcome-icon">📈</div>
-        <h2>MNQ Futures Trading Analysis</h2>
-        <p>Select a trading date to generate comprehensive multi-timeframe charts with opening range analysis. Get instant insights into market movements and trading opportunities.</p>
-        <div style="display: flex; justify-content: center; gap: 20px; margin-top: 30px;">
-            <div style="text-align: center;">
-                <div style="font-size: 24px; margin-bottom: 8px;">⚡</div>
-                <div style="font-size: 12px; color: #aaa;">Real-time Data</div>
-            </div>
-            <div style="text-align: center;">
-                <div style="font-size: 24px; margin-bottom: 8px;">📊</div>
-                <div style="font-size: 12px; color: #aaa;">3 Timeframes</div>
-            </div>
-            <div style="text-align: center;">
-                <div style="font-size: 24px; margin-bottom: 8px;">🎯</div>
-                <div style="font-size: 12px; color: #aaa;">Range Analysis</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="charts-container" id="chartsContainer">
+    <div id="loading" class="loading" style="display: none;">Loading...</div>
+    <div class="charts-container" id="chartsContainer" style="display: none;">
         <div class="chart-section">
             <div class="chart-title">30-Second Chart</div>
             <div class="chart-controls">
-                <button class="share-btn" onclick="openShareModal('30s')">📤 Share & Embed</button>
+                <button class="share-btn" onclick="openShareModal('30s')">Share & Embed</button>
             </div>
             <div class="range-info">
                 <div class="range-box range-first">
@@ -671,7 +558,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <div class="chart-section">
             <div class="chart-title">15-Minute Chart</div>
             <div class="chart-controls">
-                <button class="share-btn" onclick="openShareModal('15m')">📤 Share & Embed</button>
+                <button class="share-btn" onclick="openShareModal('15m')">Share & Embed</button>
             </div>
             <div class="range-info">
                 <div class="range-box range-first">
@@ -733,6 +620,61 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
     </div>
 
+    <!-- Widget Modal -->
+    <div id="widgetModal" class="widget-modal">
+        <div class="widget-modal-content">
+            <div class="widget-modal-header">
+                <h2>Create Widget Embed</h2>
+                <button class="close-modal" onclick="closeWidgetModal()">&times;</button>
+            </div>
+            <div class="widget-body">
+                <div class="widget-config">
+                    <div class="config-group">
+                        <label>Layout:</label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="layout" value="stacked" checked> Stacked</label>
+                            <label><input type="radio" name="layout" value="side-by-side"> Side by Side</label>
+                        </div>
+                    </div>
+                    <div class="config-group">
+                        <label>Theme:</label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="theme" value="dark" checked> Dark</label>
+                            <label><input type="radio" name="theme" value="light"> Light</label>
+                        </div>
+                    </div>
+                    <div class="config-group">
+                        <label>Range Position:</label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="rangePosition" value="above" checked> Above Charts</label>
+                            <label><input type="radio" name="rangePosition" value="below"> Below Charts</label>
+                        </div>
+                    </div>
+                    <div class="config-group">
+                        <label>Dimensions:</label>
+                        <div class="size-inputs">
+                            <input type="number" id="widgetWidth" value="800" min="400" max="1200">
+                            <span>×</span>
+                            <input type="number" id="widgetHeight" value="600" min="300" max="1000">
+                        </div>
+                    </div>
+                </div>
+                <div class="widget-preview">
+                    <div id="previewContainer"></div>
+                </div>
+                <div class="widget-code">
+                    <h3>Embed Code:</h3>
+                    <div id="widgetEmbedCode" class="embed-code"></div>
+                </div>
+                <div class="widget-actions">
+                    <button onclick="previewWidget()">Preview Widget</button>
+                    <button onclick="copyWidgetCode()" class="primary">Copy Embed Code</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
     <script>
         // Set most recent trading day as default
         function setDefaultDate() {
@@ -773,7 +715,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             document.getElementById('date').value = targetDate.toISOString().split('T')[0];
         }
 
-        // Generate charts with enhanced UX
+        // Generate charts
         async function generateCharts() {
             const date = document.getElementById('date').value;
 
@@ -783,26 +725,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             }
 
             hideError();
+            showLoading(true);
             document.getElementById('generateBtn').disabled = true;
 
-            // Show welcome state transition
-            const welcomeState = document.getElementById('welcomeState');
-            if (welcomeState && !welcomeState.classList.contains('hidden')) {
-                welcomeState.classList.add('hidden');
-                setTimeout(() => {
-                    showEnhancedLoading();
-                }, 300);
-            } else {
-                showEnhancedLoading();
-            }
-
             try {
-                // Update loading steps
-                updateLoadingStep('step-fetch', 'active');
-
                 const response = await fetch(`/api/mnq-data?date=${date}`);
-                updateLoadingStep('step-fetch', 'completed');
-                updateLoadingStep('step-process', 'active');
 
                 if (!response.ok) {
                     const errorData = await response.json();
@@ -810,103 +737,34 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 }
 
                 const data = await response.json();
-                updateLoadingStep('step-process', 'completed');
-                updateLoadingStep('step-analyze', 'active');
 
                 // Store chart data globally for toggle listeners
                 window.currentChartData = data.data;
 
                 // Calculate ranges
                 const ranges = calculateRanges(data.data);
-                updateLoadingStep('step-analyze', 'completed');
-                updateLoadingStep('step-generate', 'active');
 
-                // Hide loading and show charts with animation
-                showEnhancedLoading(false);
+                // Create charts
+                createChart('chart30s', data.data['30s'], ranges, '30s');
+                createChart('chart5m', data.data['5m'], ranges, '5m');
+                createChart('chart15m', data.data['15m'], ranges, '15m');
 
-                // Small delay for smooth transition
-                setTimeout(() => {
-                    // Show charts container
-                    const chartsContainer = document.getElementById('chartsContainer');
-                    chartsContainer.classList.add('visible');
+                // Update range info
+                updateRangeInfo(ranges);
 
-                    // Create charts sequentially with animation
-                    setTimeout(() => {
-                        createChart('chart30s', data.data['30s'], ranges, '30s');
-                        document.getElementById('chart30s').parentElement.classList.add('visible');
-                        document.getElementById('chart30s').parentElement.querySelector('.chart-controls').classList.add('visible');
-                    }, 100);
-
-                    setTimeout(() => {
-                        createChart('chart5m', data.data['5m'], ranges, '5m');
-                        document.getElementById('chart5m').parentElement.classList.add('visible');
-                        document.getElementById('chart5m').parentElement.querySelector('.chart-controls').classList.add('visible');
-                    }, 200);
-
-                    setTimeout(() => {
-                        createChart('chart15m', data.data['15m'], ranges, '15m');
-                        document.getElementById('chart15m').parentElement.classList.add('visible');
-                        document.getElementById('chart15m').parentElement.querySelector('.chart-controls').classList.add('visible');
-                    }, 300);
-
-                    // Update range info and apply active effects
-                    setTimeout(() => {
-                        updateRangeInfo(ranges);
-                        applyActiveToggleEffects();
-                    }, 400);
-                }, 100);
+                // Show the charts container after successful generation
+                document.getElementById('chartsContainer').style.display = 'block';
+                document.body.classList.add('charts-visible');
 
             } catch (error) {
-                showEnhancedLoading(false);
                 showError(`Error: ${error.message}`);
             } finally {
+                showLoading(false);
                 document.getElementById('generateBtn').disabled = false;
             }
         }
 
-        function showEnhancedLoading(show = true) {
-            const loading = document.getElementById('loading');
-            loading.style.display = show ? 'block' : 'none';
-
-            if (show) {
-                // Reset loading steps
-                document.querySelectorAll('.loading-step').forEach(step => {
-                    step.classList.remove('active', 'completed');
-                });
-            }
-        }
-
-        function updateLoadingStep(stepId, status) {
-            const step = document.getElementById(stepId);
-            if (step) {
-                step.classList.remove('active', 'completed');
-                step.classList.add(status);
-            }
-        }
-
-        function applyActiveToggleEffects() {
-            const timeframes = ['30s', '5m', '15m'];
-
-            timeframes.forEach(timeframe => {
-                const showFirst = document.getElementById(`showFirst-${timeframe}`)?.checked ?? true;
-                const show5min = document.getElementById(`show5min-${timeframe}`)?.checked ?? true;
-                const show15min = document.getElementById(`show15min-${timeframe}`)?.checked ?? true;
-
-                const rangeBoxes = document.querySelectorAll(`#chart${timeframe === '30s' ? '30s' : timeframe === '5m' ? '5m' : '15m'} ~ .range-info .range-box`);
-
-                rangeBoxes.forEach((box, index) => {
-                    const ranges = ['first', '5min', '15min'];
-                    const isActive = (index === 0 && showFirst) || (index === 1 && show5min) || (index === 2 && show15min);
-
-                    if (isActive) {
-                        box.classList.add('active');
-                    } else {
-                        box.classList.remove('active');
-                    }
-                });
-            });
-        }
-
+  
         function calculateRanges(data) {
             console.log('=== DEBUG: calculateRanges called ===');
             console.log('30s data length:', data['30s']?.length || 0);
@@ -992,6 +850,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             const lows = candleData.map(c => c.low);
             const closes = candleData.map(c => c.close);
 
+            // Determine first candle color for indicators
+            const firstCandleClose = closes[0];
+            const firstCandleOpen = opens[0];
+            const isFirstCandleGreen = firstCandleClose >= firstCandleOpen;
+
             const trace = {
                 x: times,
                 open: opens,
@@ -1013,7 +876,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             const show5min = document.getElementById(`show5min-${timeframe}`)?.checked ?? true;
             const show15min = document.getElementById(`show15min-${timeframe}`)?.checked ?? true;
 
-            // First 30s candle range (red) - show across the entire chart
+            // First 30s candle range - show across the entire chart
             if (showFirst && ranges['first'].high > 0) {
                 shapes.push(
                     {
@@ -1041,9 +904,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     yref: 'paper',
                     text: `First 30s: ${ranges['first'].low}-${ranges['first'].high}`,
                     showarrow: false,
-                    font: {color: '#e74c3c', size: 10, weight: 'bold'},
+                    font: {color: isFirstCandleGreen ? '#27ae60' : '#e74c3c', size: 14, weight: 'bold'},
                     xanchor: 'left',
-                    yanchor: 'top'
+                    yanchor: 'top',
+                    bgcolor: 'rgba(26, 26, 26, 0.8)',
+                    bordercolor: isFirstCandleGreen ? '#27ae60' : '#e74c3c',
+                    borderwidth: 1,
+                    borderpad: 4
                 });
                   }
 
@@ -1075,9 +942,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     yref: 'paper',
                     text: `5min: ${ranges['5min'].low}-${ranges['5min'].high}`,
                     showarrow: false,
-                    font: {color: '#3498db', size: 10},
+                    font: {color: '#3498db', size: 14, weight: 'bold'},
                     xanchor: 'left',
-                    yanchor: 'top'
+                    yanchor: 'top',
+                    bgcolor: 'rgba(26, 26, 26, 0.8)',
+                    bordercolor: '#3498db',
+                    borderwidth: 1,
+                    borderpad: 4
                 });
                 }
 
@@ -1110,9 +981,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     yref: 'paper',
                     text: `15min: ${ranges['15min'].low}-${ranges['15min'].high}`,
                     showarrow: false,
-                    font: {color: '#27ae60', size: 10},
+                    font: {color: '#27ae60', size: 14, weight: 'bold'},
                     xanchor: 'left',
-                    yanchor: 'top'
+                    yanchor: 'top',
+                    bgcolor: 'rgba(26, 26, 26, 0.8)',
+                    bordercolor: '#27ae60',
+                    borderwidth: 1,
+                    borderpad: 4
                 });
                   }
 
@@ -1144,10 +1019,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
             const config = {
                 responsive: true,
-                displayModeBar: false
+                displayModeBar: true,
+                modeBarButtonsToRemove: ['toImage', 'sendDataToCloud', 'editInChartStudio', 'lasso2d', 'select2d'],
+                displaylogo: false
             };
 
             Plotly.newPlot(elementId, [trace], layout, config);
+
+            // Force a redraw to ensure proper sizing
+            setTimeout(() => {
+                Plotly.Plots.resize(elementId);
+            }, 100);
         }
 
         function updateRangeInfo(ranges) {
@@ -1293,8 +1175,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                             if (chartData) {
                                 const currentRanges = calculateRanges(chartData);
                                 createChart(`chart${timeframe}`, chartData[timeframe], currentRanges, timeframe);
-                                // Apply active toggle effects after chart recreation
-                                setTimeout(() => applyActiveToggleEffects(), 100);
                             }
                         });
                     }
@@ -1403,9 +1283,174 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             }
         });
 
+        function addToggleListeners() {
+            // Add click event listeners to all range-boxes
+            document.querySelectorAll('.range-box').forEach(box => {
+                box.addEventListener('click', function(e) {
+                    // Prevent the click from firing twice if clicking on the checkbox itself
+                    if (e.target.type !== 'checkbox') {
+                        const checkbox = this.querySelector('input[type="checkbox"]');
+                        if (checkbox) {
+                            checkbox.checked = !checkbox.checked;
+                            // Trigger change event to update the chart
+                            checkbox.dispatchEvent(new Event('change'));
+                        }
+                    }
+                });
+            });
+        }
+
+        
+        // Widget Modal Functions
+        function openWidgetModal() {
+            const modal = document.getElementById('widgetModal');
+            modal.style.display = 'block';
+            generateWidgetCode(); // Auto-generate initial code
+        }
+
+        function closeWidgetModal() {
+            document.getElementById('widgetModal').style.display = 'none';
+        }
+
+        function getWidgetConfig() {
+            const layout = document.querySelector('input[name="layout"]:checked').value;
+            const theme = document.querySelector('input[name="theme"]:checked').value;
+            const rangePosition = document.querySelector('input[name="rangePosition"]:checked').value;
+            const width = document.getElementById('widgetWidth').value;
+            const height = document.getElementById('widgetHeight').value;
+
+            return {
+                layout,
+                theme,
+                rangePosition,
+                width,
+                height,
+                date: document.getElementById('date').value || new Date().toISOString().split('T')[0]
+            };
+        }
+
+        function generateWidgetCode() {
+            const config = getWidgetConfig();
+            const baseUrl = window.location.origin + window.location.pathname;
+
+            // Generate embed code with configuration
+            const widgetUrl = `${baseUrl}?widget=true&date=${config.date}&layout=${config.layout}&theme=${config.theme}&ranges=${config.rangePosition}`;
+
+            const iframeCode = `<iframe src="${widgetUrl}" width="${config.width}" height="${config.height}" frameborder="0" style="border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);"></iframe>`;
+
+            const embedElement = document.getElementById('widgetEmbedCode');
+            embedElement.innerHTML = `
+                <button class="copy-btn" onclick="copyWidgetCode()">Copy</button>
+                <div style="white-space: pre-wrap; word-break: break-all;">${iframeCode}</div>
+            `;
+        }
+
+        function copyWidgetCode() {
+            const embedElement = document.getElementById('widgetEmbedCode');
+            const codeText = embedElement.textContent.replace('Copy', '').trim();
+
+            navigator.clipboard.writeText(codeText).then(() => {
+                const button = embedElement.querySelector('.copy-btn');
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.classList.add('copied');
+
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                alert('Failed to copy: ' + err);
+            });
+        }
+
+        function previewWidget() {
+            const config = getWidgetConfig();
+            const previewContainer = document.getElementById('previewContainer');
+
+            // Create mini preview
+            previewContainer.innerHTML = `
+                <div style="width: 100%; height: 100%; background: ${config.theme === 'dark' ? '#1a1a1a' : '#ffffff'}; color: ${config.theme === 'dark' ? '#ffffff' : '#1a1a1a'}; border-radius: 8px; padding: 16px; font-family: Inter, sans-serif; font-size: 12px;">
+                    <div style="font-weight: bold; margin-bottom: 8px; text-align: center;">MNQ Futures Widget Preview</div>
+                    <div style="margin-bottom: 8px;">Date: ${config.date}</div>
+                    <div style="margin-bottom: 8px;">Layout: ${config.layout}</div>
+                    <div style="margin-bottom: 8px;">Theme: ${config.theme}</div>
+                    <div>Size: ${config.width} × ${config.height}</div>
+                    <div style="display: grid; grid-template-columns: ${config.layout === 'side-by-side' ? '1fr 1fr 1fr' : '1fr'}; gap: 8px; margin-top: 12px;">
+                        <div style="background: ${config.theme === 'dark' ? '#2a2a2a' : '#f5f5f5'}; padding: 8px; border-radius: 4px; text-align: center;">30s Chart</div>
+                        <div style="background: ${config.theme === 'dark' ? '#2a2a2a' : '#f5f5f5'}; padding: 8px; border-radius: 4px; text-align: center;">5m Chart</div>
+                        <div style="background: ${config.theme === 'dark' ? '#2a2a2a' : '#f5f5f5'}; padding: 8px; border-radius: 4px; text-align: center;">15m Chart</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Check for widget mode on page load
+        function checkWidgetMode() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('widget') === 'true') {
+                // Hide controls and header for widget mode
+                document.querySelector('.header').style.display = 'none';
+                document.querySelector('.controls').style.display = 'none';
+                document.querySelector('.welcome-state').style.display = 'none';
+
+                // Apply widget configuration
+                const layout = urlParams.get('layout') || 'stacked';
+                const theme = urlParams.get('theme') || 'dark';
+                const rangePosition = urlParams.get('ranges') || 'above';
+
+                document.body.setAttribute('data-theme', theme);
+
+                // Adjust layout for widget mode
+                if (layout === 'side-by-side') {
+                    document.querySelector('.charts-container').style.gridTemplateColumns = '1fr 1fr 1fr';
+                }
+
+                // Auto-generate charts for widget mode
+                const date = urlParams.get('date');
+                if (date && !window.location.pathname.includes('share')) {
+                    document.getElementById('date').value = date;
+                    setTimeout(() => generateCharts(), 100);
+                }
+            }
+        }
+
+        // Close widget modal when clicking outside
+        window.onclick = function(event) {
+            const shareModal = document.getElementById('shareModal');
+            const widgetModal = document.getElementById('widgetModal');
+
+            if (event.target === shareModal) {
+                closeShareModal();
+            }
+            if (event.target === widgetModal) {
+                closeWidgetModal();
+            }
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeShareModal();
+                closeWidgetModal();
+            }
+        });
+
         // Initialize
         setDefaultDate();
         addToggleListeners();
+        checkWidgetMode();
+
+        // Add window resize listener for proper chart resizing
+        window.addEventListener('resize', () => {
+            const chartIds = ['chart30s', 'chart5m', 'chart15m'];
+            chartIds.forEach(chartId => {
+                const chartElement = document.getElementById(chartId);
+                if (chartElement && chartElement.children.length > 0) {
+                    Plotly.Plots.resize(chartId);
+                }
+            });
+        });
     </script>
 </body>
 </html>"""
