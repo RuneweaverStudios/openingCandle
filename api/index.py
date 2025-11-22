@@ -3,31 +3,62 @@ import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta
 import pytz
+import sys
+import traceback
 
 app = Flask(__name__)
 
-# Standard Vercel serverless handler
+# Standard Vercel serverless handler with error handling
 def handler(environ, start_response):
     """Vercel serverless function handler"""
-    return app(environ, start_response)
+    try:
+        return app(environ, start_response)
+    except Exception as e:
+        # Log the full error for debugging
+        error_msg = f"Handler error: {str(e)}\n{traceback.format_exc()}"
+        print(error_msg, file=sys.stderr)
+
+        # Return a 500 error response
+        status = '500 Internal Server Error'
+        headers = [('Content-Type', 'application/json')]
+        start_response(status, headers)
+        error_response = jsonify({
+            'error': 'Internal server error',
+            'details': str(e)
+        })
+        return [error_response.data]
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """Simple health check endpoint"""
+    try:
+        return jsonify({
+            'status': 'healthy',
+            'timestamp': datetime.now().isoformat(),
+            'message': 'API is working'
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 500
 
 @app.route('/api/mnq-data', methods=['GET'])
 def get_mnq_data():
     """Fetch MNQ futures data from Yahoo Finance"""
-    date = request.args.get('date')
-
-    pacific = pytz.timezone('America/Los_Angeles')
-    if date:
-        try:
-            target_date = datetime.strptime(date, '%Y-%m-%d').date()
-        except ValueError:
-            return jsonify({'error': 'Invalid date format'}), 400
-    else:
-        target_date = datetime.now(pacific).date()
-        if target_date.weekday() >= 5:
-            target_date = target_date - timedelta(days=target_date.weekday() - 4)
-
     try:
+        date = request.args.get('date')
+
+        pacific = pytz.timezone('America/Los_Angeles')
+        if date:
+            try:
+                target_date = datetime.strptime(date, '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({'error': 'Invalid date format'}), 400
+        else:
+            target_date = datetime.now(pacific).date()
+            if target_date.weekday() >= 5:
+                target_date = target_date - timedelta(days=target_date.weekday() - 4)
         ticker = yf.Ticker("MNQ=F")
         end_date = target_date + timedelta(days=1)
         start_date = target_date
