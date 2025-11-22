@@ -85,6 +85,145 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             background-color: #218838;
         }
 
+        .chart-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .share-btn {
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .share-btn:hover {
+            background-color: #138496;
+        }
+
+        .share-modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+        }
+
+        .share-modal-content {
+            background-color: #2a2a2a;
+            margin: 5% auto;
+            padding: 30px;
+            border: 1px solid #444;
+            border-radius: 8px;
+            width: 600px;
+            max-width: 90%;
+            color: #ffffff;
+        }
+
+        .share-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .share-modal h2 {
+            margin: 0;
+            color: #ffffff;
+        }
+
+        .close-modal {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0;
+        }
+
+        .close-modal:hover {
+            color: #fff;
+        }
+
+        .share-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .share-option {
+            background-color: #1a1a1a;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #444;
+        }
+
+        .share-option h3 {
+            margin: 0 0 10px 0;
+            color: #17a2b8;
+            font-size: 14px;
+        }
+
+        .embed-code {
+            background-color: #000;
+            color: #00ff00;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            word-break: break-all;
+            margin-top: 10px;
+            position: relative;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 10px;
+        }
+
+        .copy-btn:hover {
+            background-color: #0056b3;
+        }
+
+        .copy-btn.copied {
+            background-color: #28a745;
+        }
+
+        .download-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        .download-btn:hover {
+            background-color: #c82333;
+        }
+
         .export-container {
             margin-top: 20px;
             padding: 20px;
@@ -132,7 +271,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             border-radius: 4px;
             font-size: 14px;
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr 1fr 1fr;
             gap: 10px;
         }
 
@@ -148,13 +287,35 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             font-size: 14px;
             color: #ffffff;
             cursor: pointer;
-            margin-bottom: 4px;
+            margin-bottom: 8px;
         }
 
         .range-box input[type="checkbox"] {
             margin: 0;
             transform: scale(1.2);
             accent-color: #0066cc;
+        }
+
+        .range-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffffff;
+            text-shadow: 0 0 4px rgba(255,255,255,0.3);
+            display: block;
+            text-align: center;
+            margin-top: 5px;
+        }
+
+        .range-first .range-value {
+            color: #e74c3c;
+        }
+
+        .range-5min .range-value {
+            color: #3498db;
+        }
+
+        .range-15min .range-value {
+            color: #27ae60;
         }
 
         .range-5min {
@@ -211,24 +372,27 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <div class="charts-container">
         <div class="chart-section">
             <div class="chart-title">30-Second Chart</div>
+            <div class="chart-controls">
+                <button class="share-btn" onclick="openShareModal('30s')">📤 Share & Embed</button>
+            </div>
             <div class="range-info">
                 <div class="range-box range-first">
                     <label>
-                        <input type="checkbox" id="showFirst-30s" checked> First 30s Candle Range:
+                        <input type="checkbox" id="showFirst-30s" checked> First 30s Range
                     </label>
-                    <span id="rangeFirst-30s">-</span>
+                    <span id="rangeFirst-30s" class="range-value">-</span>
                 </div>
                 <div class="range-box range-5min">
                     <label>
-                        <input type="checkbox" id="show5min-30s"> First 5min Range:
+                        <input type="checkbox" id="show5min-30s"> First 5min Range
                     </label>
-                    <span id="range5min-30s">-</span>
+                    <span id="range5min-30s" class="range-value">-</span>
                 </div>
                 <div class="range-box range-15min">
                     <label>
-                        <input type="checkbox" id="show15min-30s"> First 15min Range:
+                        <input type="checkbox" id="show15min-30s"> First 15min Range
                     </label>
-                    <span id="range15min-30s">-</span>
+                    <span id="range15min-30s" class="range-value">-</span>
                 </div>
             </div>
             <div id="chart30s" class="chart"></div>
@@ -236,24 +400,27 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         <div class="chart-section">
             <div class="chart-title">5-Minute Chart</div>
+            <div class="chart-controls">
+                <button class="share-btn" onclick="openShareModal('5m')">📤 Share & Embed</button>
+            </div>
             <div class="range-info">
                 <div class="range-box range-first">
                     <label>
-                        <input type="checkbox" id="showFirst-5m"> First 30s Candle Range:
+                        <input type="checkbox" id="showFirst-5m"> First 30s Range
                     </label>
-                    <span id="rangeFirst-5m">-</span>
+                    <span id="rangeFirst-5m" class="range-value">-</span>
                 </div>
                 <div class="range-box range-5min">
                     <label>
-                        <input type="checkbox" id="show5min-5m" checked> First 5min Range:
+                        <input type="checkbox" id="show5min-5m" checked> First 5min Range
                     </label>
-                    <span id="range5min-5m">-</span>
+                    <span id="range5min-5m" class="range-value">-</span>
                 </div>
                 <div class="range-box range-15min">
                     <label>
-                        <input type="checkbox" id="show15min-5m"> First 15min Range:
+                        <input type="checkbox" id="show15min-5m"> First 15min Range
                     </label>
-                    <span id="range15min-5m">-</span>
+                    <span id="range15min-5m" class="range-value">-</span>
                 </div>
             </div>
             <div id="chart5m" class="chart"></div>
@@ -261,27 +428,66 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         <div class="chart-section">
             <div class="chart-title">15-Minute Chart</div>
+            <div class="chart-controls">
+                <button class="share-btn" onclick="openShareModal('15m')">📤 Share & Embed</button>
+            </div>
             <div class="range-info">
                 <div class="range-box range-first">
                     <label>
-                        <input type="checkbox" id="showFirst-15m"> First 30s Candle Range:
+                        <input type="checkbox" id="showFirst-15m"> First 30s Range
                     </label>
-                    <span id="rangeFirst-15m">-</span>
+                    <span id="rangeFirst-15m" class="range-value">-</span>
                 </div>
                 <div class="range-box range-5min">
                     <label>
-                        <input type="checkbox" id="show5min-15m"> First 5min Range:
+                        <input type="checkbox" id="show5min-15m"> First 5min Range
                     </label>
-                    <span id="range5min-15m">-</span>
+                    <span id="range5min-15m" class="range-value">-</span>
                 </div>
                 <div class="range-box range-15min">
                     <label>
-                        <input type="checkbox" id="show15min-15m" checked> First 15min Range:
+                        <input type="checkbox" id="show15min-15m" checked> First 15min Range
                     </label>
-                    <span id="range15min-15m">-</span>
+                    <span id="range15min-15m" class="range-value">-</span>
                 </div>
             </div>
             <div id="chart15m" class="chart"></div>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="shareModal" class="share-modal">
+        <div class="share-modal-content">
+            <div class="share-modal-header">
+                <h2 id="shareModalTitle">Share Chart</h2>
+                <button class="close-modal" onclick="closeShareModal()">&times;</button>
+            </div>
+            <div class="share-options">
+                <div class="share-option">
+                    <h3>📷 Download as PNG</h3>
+                    <p>Save chart as high-quality image</p>
+                    <button class="download-btn" onclick="downloadChartAsPNG()">Download PNG</button>
+                </div>
+                <div class="share-option">
+                    <h3>🔗 Copy Link</h3>
+                    <p>Share direct link to this chart</p>
+                    <div class="embed-code" id="shareLink">
+                        <button class="copy-btn" onclick="copyToClipboard('shareLink')">Copy</button>
+                    </div>
+                </div>
+                <div class="share-option">
+                    <h3>📋 Embed Code</h3>
+                    <p>Embed this chart in your website</p>
+                    <div class="embed-code" id="embedCode">
+                        <button class="copy-btn" onclick="copyToClipboard('embedCode')">Copy</button>
+                    </div>
+                </div>
+                <div class="share-option">
+                    <h3>📱 QR Code</h3>
+                    <p>Quick mobile access</p>
+                    <div id="qrCode"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -762,6 +968,107 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 });
             });
         }
+
+        // Sharing functionality
+        let currentShareChart = null;
+
+        function openShareModal(timeframe) {
+            currentShareChart = timeframe;
+            const modal = document.getElementById('shareModal');
+            const title = document.getElementById('shareModalTitle');
+
+            // Set modal title
+            const chartNames = {
+                '30s': '30-Second Chart',
+                '5m': '5-Minute Chart',
+                '15m': '15-Minute Chart'
+            };
+            title.textContent = `Share ${chartNames[timeframe]}`;
+
+            // Generate share link
+            const date = document.getElementById('date').value || new Date().toISOString().split('T')[0];
+            const baseUrl = window.location.origin + window.location.pathname;
+            const shareUrl = `${baseUrl}?date=${date}&chart=${timeframe}`;
+
+            document.getElementById('shareLink').textContent = shareUrl;
+
+            // Generate embed code
+            const embedCode = `<iframe src="${shareUrl}" width="800" height="600" frameborder="0"></iframe>`;
+            document.getElementById('embedCode').textContent = embedCode;
+
+            // Generate QR code
+            generateQRCode(shareUrl);
+
+            // Show modal
+            modal.style.display = 'block';
+        }
+
+        function closeShareModal() {
+            document.getElementById('shareModal').style.display = 'none';
+            currentShareChart = null;
+        }
+
+        async function downloadChartAsPNG() {
+            if (!currentShareChart) return;
+
+            try {
+                const chartId = `chart${currentShareChart}`;
+
+                // Use Plotly's download functionality
+                await Plotly.downloadImage(chartId, {
+                    format: 'png',
+                    width: 1200,
+                    height: 600,
+                    filename: `MNQ_${currentShareChart}_${new Date().toISOString().split('T')[0]}`
+                });
+
+            } catch (error) {
+                alert('Download failed: ' + error.message);
+            }
+        }
+
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+            const button = element.querySelector('.copy-btn');
+
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.classList.add('copied');
+
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                alert('Failed to copy: ' + err);
+            });
+        }
+
+        function generateQRCode(url) {
+            const qrDiv = document.getElementById('qrCode');
+
+            // Use a simple QR code API
+            const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(url)}`;
+
+            qrDiv.innerHTML = `<img src="${qrImageUrl}" alt="QR Code" style="max-width: 100%; height: auto;">`;
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('shareModal');
+            if (event.target === modal) {
+                closeShareModal();
+            }
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeShareModal();
+            }
+        });
 
         // Initialize
         setDefaultDate();
