@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 import json
+import os
 from datetime import datetime, timedelta
 
 # Try to import optional dependencies
@@ -342,4 +343,9 @@ def get_winrate():
             'error': 'Failed to fetch winrate data',
             'message': str(e)
         }), 500
+
+
+# Vercel serverless handler for builds
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5001)))
 
