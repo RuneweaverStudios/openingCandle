@@ -854,7 +854,7 @@
 <body>
     <div class="header">
         <div class="theme-toggle">
-            <a href="http://127.0.0.1:5001/">🌙 Switch to Dark Theme</a>
+            <a href="/">🌙 Switch to Dark Theme</a>
         </div>
         <h1>📊 MNQ Futures Charts - White Theme</h1>
         <p>Micro Nasdaq Futures - Multi-Timeframe Analysis with Range Markers</p>
@@ -1602,20 +1602,7 @@
                     y: 0.98,
                     xref: 'paper',
                     yref: 'paper',
-                    text: `First 30s: ${firstRange.high}`,
-                    showarrow: false,
-                    font: {color: '#e74c3c', size: 12, weight: 'bold'},
-                    bgcolor: 'rgba(255, 255, 255, 0.8)',
-                    bordercolor: '#e74c3c',
-                    borderwidth: 1,
-                    borderpad: 4
-                });
-                annotations.push({
-                    x: 0.02,
-                    y: 0.02,
-                    xref: 'paper',
-                    yref: 'paper',
-                    text: `First 30s: ${firstRange.low}`,
+                    text: `First 30s: ${firstRange.low}-${firstRange.high}`,
                     showarrow: false,
                     font: {color: '#e74c3c', size: 12, weight: 'bold'},
                     bgcolor: 'rgba(255, 255, 255, 0.8)',
@@ -1651,20 +1638,7 @@
                     y: 0.98,
                     xref: 'paper',
                     yref: 'paper',
-                    text: `5min: ${fiveMinRange.high}`,
-                    showarrow: false,
-                    font: {color: '#f39c12', size: 12, weight: 'bold'},
-                    bgcolor: 'rgba(255, 255, 255, 0.8)',
-                    bordercolor: '#f39c12',
-                    borderwidth: 1,
-                    borderpad: 4
-                });
-                annotations.push({
-                    x: 0.15,
-                    y: 0.02,
-                    xref: 'paper',
-                    yref: 'paper',
-                    text: `5min: ${fiveMinRange.low}`,
+                    text: `5min: ${fiveMinRange.low}-${fiveMinRange.high}`,
                     showarrow: false,
                     font: {color: '#f39c12', size: 12, weight: 'bold'},
                     bgcolor: 'rgba(255, 255, 255, 0.8)',
@@ -1700,20 +1674,7 @@
                     y: 0.98,
                     xref: 'paper',
                     yref: 'paper',
-                    text: `15min: ${fifteenMinRange.high}`,
-                    showarrow: false,
-                    font: {color: '#9b59b6', size: 12, weight: 'bold'},
-                    bgcolor: 'rgba(255, 255, 255, 0.8)',
-                    bordercolor: '#9b59b6',
-                    borderwidth: 1,
-                    borderpad: 4
-                });
-                annotations.push({
-                    x: 0.25,
-                    y: 0.02,
-                    xref: 'paper',
-                    yref: 'paper',
-                    text: `15min: ${fifteenMinRange.low}`,
+                    text: `15min: ${fifteenMinRange.low}-${fifteenMinRange.high}`,
                     showarrow: false,
                     font: {color: '#9b59b6', size: 12, weight: 'bold'},
                     bgcolor: 'rgba(255, 255, 255, 0.8)',

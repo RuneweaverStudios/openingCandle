@@ -343,3 +343,11 @@ def get_winrate():
             'message': str(e)
         }), 500
 
+
+
+@app.route('/white-theme')
+def white_theme():
+    """Serve the white theme HTML page"""
+    return render_template('white_theme.html')
+
+# Vercel serverless handler for builds system
