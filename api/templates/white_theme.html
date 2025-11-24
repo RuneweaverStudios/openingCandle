@@ -1077,12 +1077,19 @@
     </div>
 
     <script>
-        // Set default date to today
+        // Set default date to today or last available trading day
         function setDefaultDate() {
             const today = new Date();
             const dateStr = today.toISOString().split('T')[0];
             document.getElementById('tradeDate').value = dateStr;
             document.getElementById('tradeDate').max = dateStr;
+
+            // Add helper text to guide user
+            const dateInput = document.getElementById('tradeDate');
+            const infoText = document.createElement('small');
+            infoText.style.cssText = 'color: #6c757d; font-size: 12px; margin-top: 5px; display: block;';
+            infoText.textContent = 'Note: Market data is typically available for the last 7 days';
+            dateInput.parentNode.appendChild(infoText);
         }
 
         // Initialize date on page load
@@ -1112,16 +1119,41 @@
             });
 
             try {
-                // Fetch data from backend
-                const response = await fetch(`http://localhost:5001/api/mnq-data?date=${tradeDate}`);
+                // Add timestamp to prevent caching issues
+                const timestamp = new Date().getTime();
+                const fetchUrl = `/api/mnq-data?date=${tradeDate}&_t=${timestamp}`;
+
+                console.log('Fetching data from:', fetchUrl);
+
+                // Fetch data from backend with timeout and error handling
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+                const response = await fetch(fetchUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    },
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
                 }
 
                 const data = await response.json();
+                console.log('Received data:', data);
 
                 if (data.error) {
-                    throw new Error(data.error);
+                    throw new Error(`API Error: ${data.error}${data.message ? ` - ${data.message}` : ''}`);
+                }
+
+                // Validate data structure
+                if (!data.data || typeof data.data !== 'object') {
+                    throw new Error('Invalid data structure received from server');
                 }
 
                 // Store chart data globally for toggle listeners
@@ -1149,6 +1181,15 @@
                 // Update range info displays
                 updateRangeInfo(ranges);
 
+                // Check if we have valid chart data
+                const hasValidData = data.data['30s'] && data.data['30s'].length > 0 ||
+                                   data.data['5m'] && data.data['5m'].length > 0 ||
+                                   data.data['15m'] && data.data['15m'].length > 0;
+
+                if (!hasValidData) {
+                    throw new Error('No chart data available for the selected date');
+                }
+
                 // Generate all three charts with safe range passing
                 createChart('chart30s', data.data['30s'], ranges, '30s');
                 createChart('chart5m', data.data['5m'], ranges, '5m');
@@ -1165,7 +1206,20 @@
 
             } catch (error) {
                 showLoading(false);
-                showError(`Error generating charts: ${error.message}`);
+                console.error('Chart generation error:', error);
+
+                let errorMessage = `Error generating charts: ${error.message}`;
+
+                // Add specific help for common issues
+                if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                    errorMessage += '\n\nThis could be due to network restrictions or browser extensions blocking the request.';
+                } else if (error.message.includes('AbortError')) {
+                    errorMessage += '\n\nRequest timed out. Please check your connection and try again.';
+                } else if (error.message.includes('No chart data available')) {
+                    errorMessage += '\n\nTry selecting a different date. Market data is typically available for the last 7 days.';
+                }
+
+                showError(errorMessage);
             }
         }
 
@@ -1229,7 +1283,7 @@
         // Winrate Functions
         async function loadWinrateData() {
             try {
-                const response = await fetch('http://localhost:5001/api/winrate');
+                const response = await fetch('/api/winrate');
                 const data = await response.json();
 
                 if (data.error) {
