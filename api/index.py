@@ -1,5 +1,4 @@
 from flask import Flask, request, jsonify, render_template
-from flask_cors import CORS
 import json
 from datetime import datetime, timedelta
 
@@ -13,7 +12,6 @@ except ImportError:
     DEPENDENCIES_AVAILABLE = False
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5002", "http://127.0.0.1:5002"]}})
 
 
 @app.route('/')
