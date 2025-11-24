@@ -1,0 +1,2115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MNQ Futures Charts</title>
+    <script src="https://cdn.plot.ly/plotly-2.33.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            width: 100%;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+
+        body.charts-visible {
+            justify-content: flex-start;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        label {
+            font-size: 14px;
+            color: #cccccc;
+        }
+
+        input, button {
+            padding: 8px 12px;
+            border: 1px solid #444;
+            background-color: #2a2a2a;
+            color: #ffffff;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #0066cc;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: #0052a3;
+        }
+
+        button:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .share-btn {
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .share-btn:hover {
+            background-color: #138496;
+        }
+
+        .share-modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+        }
+
+        .share-modal-content {
+            background-color: #2a2a2a;
+            margin: 5% auto;
+            padding: 30px;
+            border: 1px solid #444;
+            border-radius: 8px;
+            width: 600px;
+            max-width: 90%;
+            color: #ffffff;
+        }
+
+        .share-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .share-modal h2 {
+            margin: 0;
+            color: #ffffff;
+        }
+
+        .close-modal {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0;
+        }
+
+        .close-modal:hover {
+            color: #fff;
+        }
+
+        .share-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .share-option {
+            background-color: #1a1a1a;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #444;
+        }
+
+        .share-option h3 {
+            margin: 0 0 10px 0;
+            color: #17a2b8;
+            font-size: 14px;
+        }
+
+        .embed-code {
+            background-color: #000;
+            color: #00ff00;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            word-break: break-all;
+            margin-top: 10px;
+            position: relative;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 10px;
+        }
+
+        .copy-btn:hover {
+            background-color: #0056b3;
+        }
+
+        .copy-btn.copied {
+            background-color: #28a745;
+        }
+
+        .download-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        .download-btn:hover {
+            background-color: #c82333;
+        }
+
+        .widget-modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+        }
+
+        .widget-modal-content {
+            background-color: #2a2a2a;
+            margin: 2% auto;
+            padding: 20px;
+            border: 1px solid #444;
+            border-radius: 8px;
+            width: 800px;
+            max-width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            color: #ffffff;
+        }
+
+        .widget-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .widget-modal h2 {
+            margin: 0;
+            color: #ffffff;
+        }
+
+        .widget-body {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .widget-config {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .config-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .config-group label {
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 15px;
+        }
+
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: normal;
+            color: #cccccc;
+        }
+
+        .size-inputs {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .size-inputs input {
+            width: 80px;
+            padding: 4px 8px;
+            border: 1px solid #444;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            border-radius: 4px;
+        }
+
+        .size-inputs span {
+            color: #cccccc;
+        }
+
+        .widget-preview {
+            background-color: #1a1a1a;
+            border-radius: 4px;
+            padding: 15px;
+            min-height: 120px;
+        }
+
+        .widget-code {
+            grid-column: 1 / -1;
+        }
+
+        .widget-code h3 {
+            margin: 0 0 10px 0;
+            color: #ffffff;
+        }
+
+        .widget-actions {
+            grid-column: 1 / -1;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .widget-actions button {
+            padding: 8px 16px;
+            border: 1px solid #444;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .widget-actions button:hover {
+            background-color: #0066cc;
+        }
+
+        .widget-actions button.primary {
+            background-color: #0066cc;
+        }
+
+        .widget-actions button.primary:hover {
+            background-color: #0052a3;
+        }
+
+        .export-container {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .error {
+            color: #ff6b6b;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        .chart-section {
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .chart-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #ffffff;
+        }
+
+        .chart {
+            height: 60vh;
+            min-height: 400px;
+        }
+
+        .range-info {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #1a1a1a;
+            border-radius: 4px;
+            font-size: 14px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+        }
+
+        .range-box {
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        .range-box label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #ffffff;
+            cursor: pointer;
+            margin-bottom: 8px;
+        }
+
+        .range-box input[type="checkbox"] {
+            margin: 0;
+            transform: scale(1.2);
+            accent-color: #0066cc;
+        }
+
+        .range-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #e8e8e8;
+            display: block;
+            text-align: center;
+            margin-top: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .range-box:hover .range-value {
+            text-shadow: 0 0 8px #e8e8e8;
+        }
+
+        .loading {
+            text-align: center;
+            color: #ffffff;
+            font-size: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+
+            .range-info {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Winrate Section Styles */
+        .winrate-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .winrate-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #444;
+        }
+
+        .winrate-header h3 {
+            margin: 0;
+            color: #ffffff;
+            font-size: 18px;
+        }
+
+        .refresh-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            background: #0056b3;
+        }
+
+        .winrate-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .winrate-loading {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 40px;
+            color: #ccc;
+            font-style: italic;
+        }
+
+        .winrate-summary {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid #444;
+            text-align: center;
+        }
+
+        .winrate-overall {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .winrate-overall h4 {
+            margin: 0 0 15px 0;
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .winrate-percentage {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 10px 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .winrate-percentage.good {
+            color: #28a745;
+        }
+
+        .winrate-percentage.bad {
+            color: #dc3545;
+        }
+
+        .winrate-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .winrate-stat {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .winrate-stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            display: block;
+        }
+
+        .winrate-stat-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        .daily-breakdown {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid #444;
+        }
+
+        .daily-breakdown h4 {
+            margin: 0 0 15px 0;
+            color: #ffffff;
+            font-size: 16px;
+        }
+
+        .daily-winrate-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #444;
+        }
+
+        .daily-winrate-item:last-child {
+            border-bottom: none;
+        }
+
+        .daily-date {
+            font-weight: 500;
+            color: #ffffff;
+        }
+
+        .daily-candle {
+            font-size: 12px;
+            color: #ccc;
+            margin-left: 10px;
+        }
+
+        .daily-stats {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .winrate-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .winrate-badge.good {
+            background: #28a745;
+        }
+
+        .winrate-badge.bad {
+            background: #dc3545;
+        }
+
+        .winrate-badge.neutral {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .winrate-trades {
+            font-size: 12px;
+            color: #ccc;
+        }
+
+        .plotly .modebar {
+            top: 10px !important;
+            right: 10px !important;
+            bottom: auto !important;
+            left: auto !important;
+            transform: none !important;
+            z-index: 1000 !important;
+            opacity: 0.7 !important;
+            padding: 2px !important;
+        }
+
+        .plotly .modebar-btn {
+            background-color: #2a2a2a !important;
+            border-radius: 3px !important;
+            margin: 1px !important;
+        }
+
+        .plotly .modebar-btn:hover {
+            background-color: #0066cc !important;
+        }
+
+        @media (max-width: 768px) {
+            .winrate-header {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+
+            .winrate-content {
+                grid-template-columns: 1fr;
+            }
+
+            .winrate-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: #2a2a2a;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            position: relative;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            position: absolute;
+            right: 15px;
+            top: 10px;
+        }
+
+        .close:hover {
+            color: #fff;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #444;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+            color: #ccc;
+        }
+
+        .tab-btn.active {
+            color: #007bff;
+            border-bottom-color: #007bff;
+        }
+
+        .tab-content {
+            display: block;
+        }
+
+        .widget-options {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .widget-options label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #ccc;
+        }
+
+        .widget-options select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+
+        #widgetPreview {
+            border: 2px dashed #444;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            background: #1a1a1a;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px auto;
+                padding: 15px;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+
+            .tab-btn {
+                text-align: left;
+                border-bottom: 1px solid #444;
+                border-right: none;
+            }
+
+            .tab-btn.active {
+                border-bottom-color: #007bff;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 MNQ Futures Charts</h1>
+        <p>Micro Nasdaq Futures - Multi-Timeframe Analysis with Range Markers</p>
+        <p style="margin-top: 15px;">
+            <a href="http://127.0.0.1:5002/white-theme" style="color: #66b3ff; text-decoration: none; font-size: 14px;" target="_blank">
+                🌞 Switch to White Theme
+            </a>
+        </p>
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label for="date">Trading Date:</label>
+            <input type="date" id="date">
+        </div>
+        <button onclick="generateCharts()" id="generateBtn">Generate Charts</button>
+        <button onclick="exportAllCharts()" id="exportBtn">Export All Charts</button>
+        <button onclick="openWidgetModal()" id="widgetBtn">Create Widget</button>
+    </div>
+
+    <!-- Winrate Analysis Section -->
+    <div id="winrateSection" class="winrate-section" style="display: none;">
+        <div class="winrate-header">
+            <h3>📈 First Candle Strategy Performance</h3>
+            <button onclick="refreshWinrate()" class="refresh-btn">🔄 Refresh</button>
+        </div>
+        <div id="winrateContent" class="winrate-content">
+            <div class="winrate-loading">Loading winrate data...</div>
+        </div>
+    </div>
+
+    <div id="error" class="error" style="display: none;"></div>
+    <div id="loading" class="loading" style="display: none;">Loading...</div>
+    <div class="charts-container" id="chartsContainer" style="display: none;">
+        <div class="chart-section">
+            <div class="chart-title">30-Second Chart</div>
+            <div class="chart-controls">
+                <button class="share-btn" onclick="openShareModal('30s')">Share & Embed</button>
+            </div>
+            <div class="range-info">
+                <div class="range-box range-first">
+                    <label>
+                        <input type="checkbox" id="showFirst-30s" checked> First 30s Range
+                    </label>
+                    <span id="rangeFirst-30s" class="range-value">-</span>
+                </div>
+                <div class="range-box range-5min">
+                    <label>
+                        <input type="checkbox" id="show5min-30s"> First 5min Range
+                    </label>
+                    <span id="range5min-30s" class="range-value">-</span>
+                </div>
+                <div class="range-box range-15min">
+                    <label>
+                        <input type="checkbox" id="show15min-30s"> First 15min Range
+                    </label>
+                    <span id="range15min-30s" class="range-value">-</span>
+                </div>
+            </div>
+            <div id="chart30s" class="chart"></div>
+        </div>
+
+        <div class="chart-section">
+            <div class="chart-title">5-Minute Chart</div>
+            <div class="chart-controls">
+                <button class="share-btn" onclick="openShareModal('5m')">📤 Share & Embed</button>
+            </div>
+            <div class="range-info">
+                <div class="range-box range-first">
+                    <label>
+                        <input type="checkbox" id="showFirst-5m"> First 30s Range
+                    </label>
+                    <span id="rangeFirst-5m" class="range-value">-</span>
+                </div>
+                <div class="range-box range-5min">
+                    <label>
+                        <input type="checkbox" id="show5min-5m" checked> First 5min Range
+                    </label>
+                    <span id="range5min-5m" class="range-value">-</span>
+                </div>
+                <div class="range-box range-15min">
+                    <label>
+                        <input type="checkbox" id="show15min-5m"> First 15min Range
+                    </label>
+                    <span id="range15min-5m" class="range-value">-</span>
+                </div>
+            </div>
+            <div id="chart5m" class="chart"></div>
+        </div>
+
+        <div class="chart-section">
+            <div class="chart-title">15-Minute Chart</div>
+            <div class="chart-controls">
+                <button class="share-btn" onclick="openShareModal('15m')">Share & Embed</button>
+            </div>
+            <div class="range-info">
+                <div class="range-box range-first">
+                    <label>
+                        <input type="checkbox" id="showFirst-15m"> First 30s Range
+                    </label>
+                    <span id="rangeFirst-15m" class="range-value">-</span>
+                </div>
+                <div class="range-box range-5min">
+                    <label>
+                        <input type="checkbox" id="show5min-15m"> First 5min Range
+                    </label>
+                    <span id="range5min-15m" class="range-value">-</span>
+                </div>
+                <div class="range-box range-15min">
+                    <label>
+                        <input type="checkbox" id="show15min-15m" checked> First 15min Range
+                    </label>
+                    <span id="range15min-15m" class="range-value">-</span>
+                </div>
+            </div>
+            <div id="chart15m" class="chart"></div>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="shareModal" class="share-modal">
+        <div class="share-modal-content">
+            <div class="share-modal-header">
+                <h2 id="shareModalTitle">Share Chart</h2>
+                <button class="close-modal" onclick="closeShareModal()">&times;</button>
+            </div>
+            <div class="share-options">
+                <div class="share-option">
+                    <h3>📷 Download as PNG</h3>
+                    <p>Save chart as high-quality image</p>
+                    <button class="download-btn" onclick="downloadChartAsPNG()">Download PNG</button>
+                </div>
+                <div class="share-option">
+                    <h3>🔗 Copy Link</h3>
+                    <p>Share direct link to this chart</p>
+                    <div class="embed-code" id="shareLink">
+                        <button class="copy-btn" onclick="copyToClipboard('shareLink')">Copy</button>
+                    </div>
+                </div>
+                <div class="share-option">
+                    <h3>📋 Embed Code</h3>
+                    <p>Embed this chart in your website</p>
+                    <div class="embed-code" id="embedCode">
+                        <button class="copy-btn" onclick="copyToClipboard('embedCode')">Copy</button>
+                    </div>
+                </div>
+                <div class="share-option">
+                    <h3>📱 QR Code</h3>
+                    <p>Quick mobile access</p>
+                    <div id="qrCode"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Widget Modal -->
+    <div id="widgetModal" class="widget-modal">
+        <div class="widget-modal-content">
+            <div class="widget-modal-header">
+                <h2>Create Widget Embed</h2>
+                <button class="close-modal" onclick="closeWidgetModal()">&times;</button>
+            </div>
+            <div class="widget-body">
+                <div class="widget-config">
+                    <div class="config-group">
+                        <label>Layout:</label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="layout" value="stacked" checked> Stacked</label>
+                            <label><input type="radio" name="layout" value="side-by-side"> Side by Side</label>
+                        </div>
+                    </div>
+                    <div class="config-group">
+                        <label>Theme:</label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="theme" value="dark" checked> Dark</label>
+                            <label><input type="radio" name="theme" value="light"> Light</label>
+                        </div>
+                    </div>
+                    <div class="config-group">
+                        <label>Range Position:</label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="rangePosition" value="above" checked> Above Charts</label>
+                            <label><input type="radio" name="rangePosition" value="below"> Below Charts</label>
+                        </div>
+                    </div>
+                    <div class="config-group">
+                        <label>Dimensions:</label>
+                        <div class="size-inputs">
+                            <input type="number" id="widgetWidth" value="800" min="400" max="1200">
+                            <span>×</span>
+                            <input type="number" id="widgetHeight" value="600" min="300" max="1000">
+                        </div>
+                    </div>
+                </div>
+                <div class="widget-preview">
+                    <div id="previewContainer"></div>
+                </div>
+                <div class="widget-code">
+                    <h3>Embed Code:</h3>
+                    <div id="widgetEmbedCode" class="embed-code"></div>
+                </div>
+                <div class="widget-actions">
+                    <button onclick="previewWidget()">Preview Widget</button>
+                    <button onclick="copyWidgetCode()" class="primary">Copy Embed Code</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Winrate Functions
+        async function loadWinrateData() {
+            try {
+                const response = await fetch('/api/winrate');
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                displayWinrateData(data);
+            } catch (error) {
+                document.getElementById('winrateContent').innerHTML =
+                    `<div class="winrate-loading" style="color: #dc3545;">Error loading winrate data: ${error.message}</div>`;
+            }
+        }
+
+        function refreshWinrate() {
+            document.getElementById('winrateContent').innerHTML =
+                '<div class="winrate-loading">Refreshing winrate data...</div>';
+            loadWinrateData();
+        }
+
+        function displayWinrateData(data) {
+            const winrateClass = data.overall_winrate >= 50 ? 'good' : 'bad';
+            const overallColor = data.overall_winrate >= 50 ? '#28a745' : '#dc3545';
+
+            let html = `
+                <div class="winrate-overall">
+                    <h4>Overall Win Rate (7 Days)</h4>
+                    <div class="winrate-percentage ${winrateClass}" style="color: ${overallColor};">
+                        ${data.overall_winrate}%
+                    </div>
+                    <div class="winrate-stats">
+                        <div class="winrate-stat">
+                            <span class="winrate-stat-value">${data.total_days}</span>
+                            <span class="winrate-stat-label">Days</span>
+                        </div>
+                        <div class="winrate-stat">
+                            <span class="winrate-stat-value">${data.winning_days}</span>
+                            <span class="winrate-stat-label">Winning Days</span>
+                        </div>
+                        <div class="winrate-stat">
+                            <span class="winrate-stat-value">${data.total_wins}</span>
+                            <span class="winrate-stat-label">Total Wins</span>
+                        </div>
+                        <div class="winrate-stat">
+                            <span class="winrate-stat-value">${data.total_losses}</span>
+                            <span class="winrate-stat-label">Total Losses</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add daily breakdown
+            if (data.daily_breakdown && data.daily_breakdown.length > 0) {
+                html += '<div class="daily-breakdown"><h4>Daily Performance</h4>';
+
+                data.daily_breakdown.forEach(day => {
+                    const badgeClass = day.winrate >= 50 ? 'good' : (day.winrate > 45 ? 'neutral' : 'bad');
+                    const candleIcon = day.first_candle.direction === 'up' ? '📈' : '📉';
+
+                    html += `
+                        <div class="daily-winrate-item">
+                            <div>
+                                <span class="daily-date">${day.date}</span>
+                                <span class="daily-candle">${candleIcon} ${day.first_candle.range.toFixed(2)}</span>
+                            </div>
+                            <div class="daily-stats">
+                                <span class="winrate-badge ${badgeClass}">${day.winrate}%</span>
+                                <span class="winrate-trades">${day.trades} trades</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+            }
+
+            document.getElementById('winrateContent').innerHTML = html;
+        }
+
+        function calculateRanges(data) {
+            console.log('=== DEBUG: calculateRanges called ===');
+
+            // Defensive: Check if data exists and is valid
+            if (!data || typeof data !== 'object') {
+                console.error('Invalid data provided to calculateRanges:', data);
+                return createDefaultRanges();
+            }
+
+            console.log('30s data length:', data['30s']?.length || 0);
+            console.log('5m data length:', data['5m']?.length || 0);
+            console.log('15m data length:', data['15m']?.length || 0);
+
+            // Defensive: Check if we have any data at all
+            if ((!data['30s'] || data['30s'].length === 0) &&
+                (!data['5m'] || data['5m'].length === 0)) {
+                console.error('No valid data found in any timeframe');
+                return createDefaultRanges();
+            }
+
+            // Calculate first 30-second candle range (just the first candle)
+            let first30sRange = { high: 0, low: 0, range: '0' };
+            if (data['30s'] && Array.isArray(data['30s']) && data['30s'].length >= 1) {
+                const firstCandle = data['30s'][0];
+                if (firstCandle && typeof firstCandle === 'object' && 'high' in firstCandle && 'low' in firstCandle) {
+                    first30sRange.high = parseFloat(firstCandle.high) || 0;
+                    first30sRange.low = parseFloat(firstCandle.low) || 0;
+                    first30sRange.range = (first30sRange.high - first30sRange.low).toFixed(2);
+                    console.log('First 30s candle:', firstCandle);
+                    console.log('First 30s range:', first30sRange);
+                } else {
+                    console.warn('Invalid first candle data:', firstCandle);
+                }
+            }
+
+            // Calculate first 5min range from 30-second data (10 candles = 5 minutes)
+            let first5minRange = { high: 0, low: 0, range: '0' };
+            if (data['30s'] && Array.isArray(data['30s']) && data['30s'].length >= 10) {
+                // Get first 10 thirty-second candles (5 minutes)
+                const first10ThirtySec = data['30s'].slice(0, 10);
+                console.log('First 10 thirty-second candles:', first10ThirtySec);
+
+                // Defensive: Filter out invalid candles
+                const validCandles = first10ThirtySec.filter(c =>
+                    c && typeof c === 'object' && 'high' in c && 'low' in c
+                );
+
+                if (validCandles.length > 0) {
+                    first5minRange.high = Math.max(...validCandles.map(c => parseFloat(c.high) || 0));
+                    first5minRange.low = Math.min(...validCandles.map(c => parseFloat(c.low) || 0));
+                    first5minRange.range = (first5minRange.high - first5minRange.low).toFixed(2);
+                    console.log('Calculated 5min range:', first5minRange);
+                } else {
+                    console.warn('No valid candles found in first 10 thirty-second candles');
+                }
+            } else {
+                console.log('Not enough 30s data for 5min range. Available:', data['30s']?.length || 0);
+            }
+
+            // Calculate first 15min range from 30-second data (30 candles = 15 minutes)
+            let first15minRange = { high: 0, low: 0, range: '0' };
+            if (data['30s'] && Array.isArray(data['30s']) && data['30s'].length >= 30) {
+                // Get first 30 thirty-second candles (15 minutes)
+                const first30ThirtySec = data['30s'].slice(0, 30);
+                console.log('First 30 thirty-second candles count:', first30ThirtySec.length);
+
+                // Defensive: Filter out invalid candles
+                const validCandles = first30ThirtySec.filter(c =>
+                    c && typeof c === 'object' && 'high' in c && 'low' in c
+                );
+
+                if (validCandles.length > 0) {
+                    first15minRange.high = Math.max(...validCandles.map(c => parseFloat(c.high) || 0));
+                    first15minRange.low = Math.min(...validCandles.map(c => parseFloat(c.low) || 0));
+                    first15minRange.range = (first15minRange.high - first15minRange.low).toFixed(2);
+                    console.log('Calculated 15min range:', first15minRange);
+                } else {
+                    console.warn('No valid candles found in first 30 thirty-second candles');
+                }
+            } else {
+                console.log('Not enough 30s data for 15min range. Available:', data['30s']?.length || 0);
+            }
+
+            const result = {
+                'first': first30sRange,
+                '5min': first5minRange,
+                '15min': first15minRange
+            };
+
+            console.log('Final result:', result);
+            console.log('=== END DEBUG ===');
+
+            return result;
+        }
+
+        // Helper function to create default ranges when data is invalid
+        function createDefaultRanges() {
+            return {
+                'first': { high: 0, low: 0, range: '0' },
+                '5min': { high: 0, low: 0, range: '0' },
+                '15min': { high: 0, low: 0, range: '0' }
+            };
+        }
+
+        function createChart(elementId, candleData, ranges, timeframe) {
+            if (!candleData || candleData.length === 0) {
+                document.getElementById(elementId).innerHTML = '<div style="text-align: center; padding: 50px;">No data available</div>';
+                return;
+            }
+
+            // Convert timestamps to Pacific time for display
+            const times = candleData.map(c => {
+                // Parse the timestamp - it should already be in Pacific time from the backend
+                const date = new Date(c.timestamp);
+                return date;
+            });
+            const opens = candleData.map(c => c.open);
+            const highs = candleData.map(c => c.high);
+            const lows = candleData.map(c => c.low);
+            const closes = candleData.map(c => c.close);
+            const volumes = candleData.map(c => c.volume);
+
+            // Determine first candle color for indicators
+            const firstCandleClose = closes[0];
+            const firstCandleOpen = opens[0];
+            const isFirstCandleGreen = firstCandleClose >= firstCandleOpen;
+
+            const candlestickTrace = {
+                x: times,
+                open: opens,
+                high: highs,
+                low: lows,
+                close: closes,
+                type: 'candlestick',
+                name: 'MNQ',
+                increasing: {line: {color: '#00ff00'}},
+                decreasing: {line: {color: '#ff0000'}},
+                showlegend: true,
+                visible: true
+            };
+
+            // Create volume trace for main chart only
+            const volumeTrace = {
+                x: times,
+                y: volumes,
+                type: 'bar',
+                name: 'Volume',
+                marker: {
+                    color: volumes.map((vol, i) => {
+                        // Color volume bars based on candle direction
+                        return closes[i] >= opens[i] ? '#00ff00' : '#ff0000';
+                    }),
+                    opacity: 0.2
+                },
+                yaxis: 'y2', // Use separate y-axis for volume
+                xaxis: 'x',
+                showlegend: true
+            };
+
+            // Create a faint candlestick trace specifically for the rangeslider
+            const sliderCandlestickTrace = {
+                x: times,
+                open: opens,
+                high: highs,
+                low: lows,
+                close: closes,
+                type: 'candlestick',
+                name: 'Slider Candles',
+                increasing: {line: {color: 'rgba(0, 255, 0, 0.05)'}},
+                decreasing: {line: {color: 'rgba(255, 0, 0, 0.05)'}},
+                showlegend: false,
+                visible: 'legendonly' // Hide from main chart, show only in rangeslider
+            };
+
+            // Add range lines based on toggle states
+            const shapes = [];
+            const annotations = [];
+
+            // Check toggle states for this specific chart
+            const showFirst = document.getElementById(`showFirst-${timeframe}`)?.checked ?? true;
+            const show5min = document.getElementById(`show5min-${timeframe}`)?.checked ?? true;
+            const show15min = document.getElementById(`show15min-${timeframe}`)?.checked ?? true;
+
+            // Defensive: Create safe range access variables
+            const firstRange = ranges && ranges['first'] ? ranges['first'] : { high: 0, low: 0, range: '0' };
+            const fiveMinRange = ranges && ranges['5min'] ? ranges['5min'] : { high: 0, low: 0, range: '0' };
+            const fifteenMinRange = ranges && ranges['15min'] ? ranges['15min'] : { high: 0, low: 0, range: '0' };
+
+            // First 30s candle range - show across the entire chart
+            if (showFirst && firstRange.high > 0) {
+                shapes.push(
+                    {
+                        type: 'line',
+                        x0: times[0],
+                        x1: times[times.length - 1], // Show across entire chart
+                        y0: firstRange.high,
+                        y1: firstRange.high,
+                        line: {color: '#e74c3c', width: 3, dash: 'solid'}
+                    },
+                    {
+                        type: 'line',
+                        x0: times[0],
+                        x1: times[times.length - 1], // Show across entire chart
+                        y0: firstRange.low,
+                        y1: firstRange.low,
+                        line: {color: '#e74c3c', width: 3, dash: 'solid'}
+                    }
+                );
+                // Left side annotation
+                annotations.push({
+                    x: 0.02,
+                    y: 0.98,
+                    xref: 'paper',
+                    yref: 'paper',
+                    text: `First 30s: ${ranges['first'].low}-${ranges['first'].high}`,
+                    showarrow: false,
+                    font: {color: isFirstCandleGreen ? '#27ae60' : '#e74c3c', size: 14, weight: 'bold'},
+                    xanchor: 'left',
+                    yanchor: 'top',
+                    bgcolor: 'rgba(26, 26, 26, 0.8)',
+                    bordercolor: isFirstCandleGreen ? '#27ae60' : '#e74c3c',
+                    borderwidth: 1,
+                    borderpad: 4
+                });
+            }
+
+            // 5min range (blue)
+            if (show5min && fiveMinRange.high > 0) {
+                shapes.push(
+                    {
+                        type: 'line',
+                        x0: times[0],
+                        x1: times[times.length - 1],
+                        y0: fiveMinRange.high,
+                        y1: fiveMinRange.high,
+                        line: {color: '#3498db', width: 2, dash: 'dash'}
+                    },
+                    {
+                        type: 'line',
+                        x0: times[0],
+                        x1: times[times.length - 1],
+                        y0: fiveMinRange.low,
+                        y1: fiveMinRange.low,
+                        line: {color: '#3498db', width: 2, dash: 'dash'}
+                    }
+                );
+                // Left side annotation for 5min
+                annotations.push({
+                    x: 0.02,
+                    y: showFirst ? 0.92 : 0.98, // Adjust position based on first candle visibility
+                    xref: 'paper',
+                    yref: 'paper',
+                    text: `5min: ${ranges['5min'].low}-${ranges['5min'].high}`,
+                    showarrow: false,
+                    font: {color: '#3498db', size: 14, weight: 'bold'},
+                    xanchor: 'left',
+                    yanchor: 'top',
+                    bgcolor: 'rgba(26, 26, 26, 0.8)',
+                    bordercolor: '#3498db',
+                    borderwidth: 1,
+                    borderpad: 4
+                });
+            }
+
+            // 15min range (green)
+            if (show15min && fifteenMinRange.high > 0) {
+                shapes.push(
+                    {
+                        type: 'line',
+                        x0: times[0],
+                        x1: times[times.length - 1],
+                        y0: fifteenMinRange.high,
+                        y1: fifteenMinRange.high,
+                        line: {color: '#27ae60', width: 2, dash: 'dash'}
+                    },
+                    {
+                        type: 'line',
+                        x0: times[0],
+                        x1: times[times.length - 1],
+                        y0: fifteenMinRange.low,
+                        y1: fifteenMinRange.low,
+                        line: {color: '#27ae60', width: 2, dash: 'dash'}
+                    }
+                );
+                const yPosition = showFirst ? 0.86 : (show5min ? 0.92 : 0.98); // Adjust position based on visibility
+                // Left side annotation for 15min
+                annotations.push({
+                    x: 0.02,
+                    y: yPosition,
+                    xref: 'paper',
+                    yref: 'paper',
+                    text: `15min: ${ranges['15min'].low}-${ranges['15min'].high}`,
+                    showarrow: false,
+                    font: {color: '#27ae60', size: 14, weight: 'bold'},
+                    xanchor: 'left',
+                    yanchor: 'top',
+                    bgcolor: 'rgba(26, 26, 26, 0.8)',
+                    bordercolor: '#27ae60',
+                    borderwidth: 1,
+                    borderpad: 4
+                });
+            }
+
+            const layout = {
+                title: `MNQ Futures - ${timeframe.toUpperCase()} (${document.getElementById('date').value || new Date().toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'})} PT)`,
+                titlefont: {color: '#ffffff', size: 14},
+                paper_bgcolor: '#2a2a2a',
+                plot_bgcolor: '#1a1a1a',
+                font: {color: '#ffffff'},
+                xaxis: {
+                    rangeslider: {
+                        visible: true,
+                        yaxis: {rangemode: 'normal'},
+                        bgcolor: 'rgba(26, 26, 26, 0.7)',
+                        bordercolor: '#444',
+                        borderwidth: 1
+                    },
+                    gridcolor: '#444',
+                    type: 'date',
+                    tickformat: '%H:%M', // Show time in HH:MM format
+                    tickfont: {color: '#ffffff', size: 9},
+                    showgrid: true,
+                    dtick: 3600000, // Tick every hour
+                    tick0: '06:30' // Start at 6:30 AM
+                },
+                yaxis: {
+                    gridcolor: '#444',
+                    tickfont: {color: '#ffffff', size: 10},
+                    autorange: true
+                },
+                yaxis2: {
+                    title: 'Volume',
+                    titlefont: {color: '#ffffff', size: 12},
+                    tickfont: {color: '#ffffff', size: 10},
+                    overlaying: 'y',
+                    side: 'right',
+                    showgrid: false,
+                    autorange: true
+                },
+                margin: {t: 50, r: 20, b: 60, l: 70}, // Increased top margin for title
+                shapes: shapes,
+                annotations: annotations
+            };
+
+            const config = {
+                responsive: true,
+                displayModeBar: true,
+                modeBarButtonsToRemove: ['toImage', 'sendDataToCloud', 'editInChartStudio', 'lasso2d', 'select2d'],
+                displaylogo: false,
+                scrollZoom: true
+            };
+
+            Plotly.newPlot(elementId, [candlestickTrace, volumeTrace, sliderCandlestickTrace], layout, config);
+
+            // Store chart data for later use in toggle updates
+            window[`${timeframe}ChartData`] = { times, isFirstCandleGreen };
+
+            // Force a redraw to ensure proper sizing
+            setTimeout(() => {
+                Plotly.Plots.resize(elementId);
+            }, 100);
+        }
+
+        function updateRangeInfo(ranges) {
+            // Defensive: Check if ranges is valid
+            if (!ranges || typeof ranges !== 'object') {
+                console.error('Invalid ranges provided to updateRangeInfo:', ranges);
+                return;
+            }
+
+            // Helper function to safely format range text
+            function safeFormatRange(rangeKey, label) {
+                if (ranges[rangeKey] && typeof ranges[rangeKey] === 'object' &&
+                    'low' in ranges[rangeKey] && 'high' in ranges[rangeKey] && 'range' in ranges[rangeKey]) {
+                    return `${ranges[rangeKey].low} - ${ranges[rangeKey].high} (Range: ${ranges[rangeKey].range})`;
+                }
+                console.warn(`Invalid range data for ${label}:`, ranges[rangeKey]);
+                return `${label}: No data`;
+            }
+
+            // Update all range displays
+            const rangeFirstText = safeFormatRange('first', 'First 30s');
+            const range5minText = safeFormatRange('5min', '5min');
+            const range15minText = safeFormatRange('15min', '15min');
+
+            // Update 30s chart
+            document.getElementById('rangeFirst-30s').textContent = rangeFirstText;
+            document.getElementById('range5min-30s').textContent = range5minText;
+            document.getElementById('range15min-30s').textContent = range15minText;
+
+            // Update 5m chart
+            document.getElementById('rangeFirst-5m').textContent = rangeFirstText;
+            document.getElementById('range5min-5m').textContent = range5minText;
+            document.getElementById('range15min-5m').textContent = range15minText;
+
+            // Update 15m chart
+            document.getElementById('rangeFirst-15m').textContent = rangeFirstText;
+            document.getElementById('range5min-15m').textContent = range5minText;
+            document.getElementById('range15min-15m').textContent = range15minText;
+        }
+
+        // Export all charts as images
+        async function exportAllCharts() {
+            const date = document.getElementById('date').value || 'unknown';
+            const ticker = 'MNQ';
+
+            try {
+                // Create a combined container
+                const exportContainer = document.createElement('div');
+                exportContainer.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: white;
+                    z-index: 9999;
+                    padding: 20px;
+                    overflow-y: auto;
+                `;
+
+                // Add title and date
+                const header = document.createElement('div');
+                header.innerHTML = `
+                    <h1 style="color: #333; text-align: center; margin-bottom: 10px;">
+                        ${ticker} Futures Charts - ${date}
+                    </h1>
+                    <p style="color: #666; text-align: center; margin-bottom: 30px;">
+                        <strong>First 5min Range:</strong> ${document.getElementById('range5min-30s').textContent} |
+                        <strong>First 15min Range:</strong> ${document.getElementById('range15min-30s').textContent}
+                    </p>
+                `;
+                exportContainer.appendChild(header);
+
+                // Get all three charts
+                const chartIds = ['chart30s', 'chart5m', 'chart15m'];
+                const titles = ['30-Second Chart', '5-Minute Chart', '15-Minute Chart'];
+
+                for (let i = 0; i < chartIds.length; i++) {
+                    const chartElement = document.getElementById(chartIds[i]);
+                    const chartSection = document.createElement('div');
+                    chartSection.style.cssText = 'margin-bottom: 40px; background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;';
+
+                    // Add chart title
+                    const chartTitle = document.createElement('h3');
+                    chartTitle.textContent = titles[i];
+                    chartTitle.style.cssText = 'color: #333; text-align: center; margin: 15px 0; font-size: 18px;';
+                    chartSection.appendChild(chartTitle);
+
+                    // Clone the chart
+                    const chartClone = chartElement.cloneNode(true);
+                    chartClone.style.cssText = 'height: 400px; width: 100%; background: white;';
+                    chartSection.appendChild(chartClone);
+
+                    exportContainer.appendChild(chartSection);
+                }
+
+                // Add export instructions
+                const instructions = document.createElement('div');
+                instructions.innerHTML = `
+                    <p style="color: #666; text-align: center; margin-top: 30px;">
+                        Use your browser's print function (Cmd+P or Ctrl+P) to save as PDF, or take screenshots
+                    </p>
+                    <button onclick="this.parentElement.parentElement.remove()" style="
+                        display: block;
+                        margin: 20px auto;
+                        padding: 10px 20px;
+                        background: #dc3545;
+                        color: white;
+                        border: none;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 16px;
+                    ">Close Export View</button>
+                `;
+                exportContainer.appendChild(instructions);
+
+                document.body.appendChild(exportContainer);
+
+                // Redraw charts in the new container
+                for (let i = 0; i < chartIds.length; i++) {
+                    const chartClone = exportContainer.querySelectorAll('.plotly')[i];
+                    if (window.Plotly && chartClone) {
+                        // This will require re-plotting with white background
+                        // For now, the clone should work for screenshots
+                    }
+                }
+
+            } catch (error) {
+                showError('Export failed: ' + error.message);
+            }
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('error');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error').style.display = 'none';
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        // Sharing functionality
+        let currentShareChart = null;
+
+        function openShareModal(timeframe) {
+            currentShareChart = timeframe;
+            const modal = document.getElementById('shareModal');
+            const title = document.getElementById('shareModalTitle');
+
+            // Set modal title
+            const chartNames = {
+                '30s': '30-Second Chart',
+                '5m': '5-Minute Chart',
+                '15m': '15-Minute Chart'
+            };
+            title.textContent = `Share ${chartNames[timeframe]}`;
+
+            // Generate share link
+            const date = document.getElementById('date').value || new Date().toISOString().split('T')[0];
+            const baseUrl = window.location.origin + window.location.pathname;
+            const shareUrl = `${baseUrl}?date=${date}&chart=${timeframe}`;
+
+            document.getElementById('shareLink').textContent = shareUrl;
+
+            // Generate embed code
+            const embedCode = `<iframe src="${shareUrl}" width="800" height="600" frameborder="0"></iframe>`;
+            document.getElementById('embedCode').textContent = embedCode;
+
+            // Generate QR code
+            generateQRCode(shareUrl);
+
+            // Show modal
+            modal.style.display = 'block';
+        }
+
+        function closeShareModal() {
+            document.getElementById('shareModal').style.display = 'none';
+            currentShareChart = null;
+        }
+
+        async function downloadChartAsPNG() {
+            if (!currentShareChart) return;
+
+            try {
+                const chartId = `chart${currentShareChart}`;
+
+                // Use Plotly's download functionality
+                await Plotly.downloadImage(chartId, {
+                    format: 'png',
+                    width: 1200,
+                    height: 600,
+                    filename: `MNQ_${currentShareChart}_${new Date().toISOString().split('T')[0]}`
+                });
+
+            } catch (error) {
+                alert('Download failed: ' + error.message);
+            }
+        }
+
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+            const button = element.querySelector('.copy-btn');
+
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.classList.add('copied');
+
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                alert('Failed to copy: ' + err);
+            });
+        }
+
+        function generateQRCode(url) {
+            const qrDiv = document.getElementById('qrCode');
+
+            // Use a simple QR code API
+            const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(url)}`;
+
+            qrDiv.innerHTML = `<img src="${qrImageUrl}" alt="QR Code" style="max-width: 100%; height: auto;">`;
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('shareModal');
+            if (event.target === modal) {
+                closeShareModal();
+            }
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeShareModal();
+            }
+        });
+
+        function addToggleListeners() {
+            // Add click event listeners to all range-boxes
+            document.querySelectorAll('.range-box').forEach(box => {
+                box.addEventListener('click', function(e) {
+                    // Prevent the click from firing twice if clicking on the checkbox itself
+                    if (e.target.type !== 'checkbox') {
+                        const checkbox = this.querySelector('input[type="checkbox"]');
+                        if (checkbox) {
+                            checkbox.checked = !checkbox.checked;
+                            // Trigger change event to update the chart
+                            checkbox.dispatchEvent(new Event('change'));
+                        }
+                    }
+                });
+            });
+
+            // Add change event listeners to all checkboxes to update chart indicators
+            document.querySelectorAll('input[type="checkbox"][id^="showFirst"], input[type="checkbox"][id^="show5min"], input[type="checkbox"][id^="show15min"]').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    updateChartIndicators();
+                });
+            });
+        }
+
+        function updateChartIndicators() {
+            // Update each timeframe chart with current toggle states
+            ['30s', '5m', '15m'].forEach(timeframe => {
+                const elementId = `chart-${timeframe}`;
+
+                // Get current toggle states
+                const showFirst = document.getElementById(`showFirst-${timeframe}`)?.checked ?? true;
+                const show5min = document.getElementById(`show5min-${timeframe}`)?.checked ?? true;
+                const show15min = document.getElementById(`show15min-${timeframe}`)?.checked ?? true;
+
+                // Get stored ranges for this timeframe
+                const ranges = window[`${timeframe}Ranges`];
+                if (!ranges) return;
+
+                // Get chart data for recreating shapes and annotations
+                const chartData = window[`${timeframe}ChartData`];
+                if (!chartData) return;
+
+                const { times, isFirstCandleGreen } = chartData;
+
+                // Create shapes and annotations based on current toggle states
+                const shapes = [];
+                const annotations = [];
+
+                // Defensive: Create safe range access variables
+                const firstRange = ranges && ranges['first'] ? ranges['first'] : { high: 0, low: 0, range: '0' };
+                const fiveMinRange = ranges && ranges['5min'] ? ranges['5min'] : { high: 0, low: 0, range: '0' };
+                const fifteenMinRange = ranges && ranges['15min'] ? ranges['15min'] : { high: 0, low: 0, range: '0' };
+
+                // First 30s candle range - show across the entire chart
+                if (showFirst && firstRange.high > 0) {
+                    shapes.push(
+                        {
+                            type: 'line',
+                            x0: times[0],
+                            x1: times[times.length - 1], // Show across entire chart
+                            y0: firstRange.high,
+                            y1: firstRange.high,
+                            line: {color: '#e74c3c', width: 3, dash: 'solid'}
+                        },
+                        {
+                            type: 'line',
+                            x0: times[0],
+                            x1: times[times.length - 1], // Show across entire chart
+                            y0: firstRange.low,
+                            y1: firstRange.low,
+                            line: {color: '#27ae60', width: 3, dash: 'solid'}
+                        }
+                    );
+                    // Left side annotation
+                    annotations.push({
+                        x: 0.02,
+                        y: 0.98,
+                        xref: 'paper',
+                        yref: 'paper',
+                        text: `First 30s: ${firstRange.low}-${firstRange.high}`,
+                        showarrow: false,
+                        font: {color: isFirstCandleGreen ? '#27ae60' : '#e74c3c', size: 14, weight: 'bold'},
+                        xanchor: 'left',
+                        yanchor: 'top',
+                        bgcolor: 'rgba(26, 26, 26, 0.8)',
+                        bordercolor: isFirstCandleGreen ? '#27ae60' : '#e74c3c',
+                        borderwidth: 1,
+                        borderpad: 4
+                    });
+                }
+
+                // 5min range (blue)
+                if (show5min && fiveMinRange.high > 0) {
+                    shapes.push(
+                        {
+                            type: 'line',
+                            x0: times[0],
+                            x1: times[times.length - 1], // Show across entire chart
+                            y0: fiveMinRange.high,
+                            y1: fiveMinRange.high,
+                            line: {color: '#3498db', width: 3, dash: 'dash'}
+                        },
+                        {
+                            type: 'line',
+                            x0: times[0],
+                            x1: times[times.length - 1], // Show across entire chart
+                            y0: fiveMinRange.low,
+                            y1: fiveMinRange.low,
+                            line: {color: '#3498db', width: 3, dash: 'dash'}
+                        }
+                    );
+                    // Left side annotation
+                    annotations.push({
+                        x: 0.02,
+                        y: showFirst ? 0.88 : 0.98, // Position below first if visible
+                        xref: 'paper',
+                        yref: 'paper',
+                        text: `First 5min: ${fiveMinRange.low}-${fiveMinRange.high}`,
+                        showarrow: false,
+                        font: {color: '#3498db', size: 14, weight: 'bold'},
+                        xanchor: 'left',
+                        yanchor: 'top',
+                        bgcolor: 'rgba(26, 26, 26, 0.8)',
+                        bordercolor: '#3498db',
+                        borderwidth: 1,
+                        borderpad: 4
+                    });
+                }
+
+                // 15min range (green)
+                if (show15min && fifteenMinRange.high > 0) {
+                    shapes.push(
+                        {
+                            type: 'line',
+                            x0: times[0],
+                            x1: times[times.length - 1], // Show across entire chart
+                            y0: fifteenMinRange.high,
+                            y1: fifteenMinRange.high,
+                            line: {color: '#27ae60', width: 3, dash: 'dot'}
+                        },
+                        {
+                            type: 'line',
+                            x0: times[0],
+                            x1: times[times.length - 1], // Show across entire chart
+                            y0: fifteenMinRange.low,
+                            y1: fifteenMinRange.low,
+                            line: {color: '#27ae60', width: 3, dash: 'dot'}
+                        }
+                    );
+                    // Left side annotation
+                    annotations.push({
+                        x: 0.02,
+                        y: (showFirst ? 0.78 : 0.88) - (show5min ? 0.1 : 0), // Position below others
+                        xref: 'paper',
+                        yref: 'paper',
+                        text: `First 15min: ${fifteenMinRange.low}-${fifteenMinRange.high}`,
+                        showarrow: false,
+                        font: {color: '#27ae60', size: 14, weight: 'bold'},
+                        xanchor: 'left',
+                        yanchor: 'top',
+                        bgcolor: 'rgba(26, 26, 26, 0.8)',
+                        bordercolor: '#27ae60',
+                        borderwidth: 1,
+                        borderpad: 4
+                    });
+                }
+
+                // Update the chart layout with new shapes and annotations
+                Plotly.relayout(elementId, {
+                    shapes: shapes,
+                    annotations: annotations
+                });
+            });
+        }
+
+        // Widget Modal Functions
+        function openWidgetModal() {
+            const modal = document.getElementById('widgetModal');
+            modal.style.display = 'block';
+            generateWidgetCode(); // Auto-generate initial code
+        }
+
+        function closeWidgetModal() {
+            document.getElementById('widgetModal').style.display = 'none';
+        }
+
+        function getWidgetConfig() {
+            const layout = document.querySelector('input[name="layout"]:checked').value;
+            const theme = document.querySelector('input[name="theme"]:checked').value;
+            const rangePosition = document.querySelector('input[name="rangePosition"]:checked').value;
+            const width = document.getElementById('widgetWidth').value;
+            const height = document.getElementById('widgetHeight').value;
+
+            return {
+                layout,
+                theme,
+                rangePosition,
+                width,
+                height,
+                date: document.getElementById('date').value || new Date().toISOString().split('T')[0]
+            };
+        }
+
+        function generateWidgetCode() {
+            const config = getWidgetConfig();
+            const baseUrl = window.location.origin + window.location.pathname;
+
+            // Generate embed code with configuration
+            const widgetUrl = `${baseUrl}?widget=true&date=${config.date}&layout=${config.layout}&theme=${config.theme}&ranges=${config.rangePosition}`;
+
+            const iframeCode = `<iframe src="${widgetUrl}" width="${config.width}" height="${config.height}" frameborder="0" style="border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);"></iframe>`;
+
+            const embedElement = document.getElementById('widgetEmbedCode');
+            embedElement.innerHTML = `
+                <button class="copy-btn" onclick="copyWidgetCode()">Copy</button>
+                <div style="white-space: pre-wrap; word-break: break-all;">${iframeCode}</div>
+            `;
+        }
+
+        function copyWidgetCode() {
+            const embedElement = document.getElementById('widgetEmbedCode');
+            const codeText = embedElement.textContent.replace('Copy', '').trim();
+
+            navigator.clipboard.writeText(codeText).then(() => {
+                const button = embedElement.querySelector('.copy-btn');
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.classList.add('copied');
+
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                alert('Failed to copy: ' + err);
+            });
+        }
+
+        function previewWidget() {
+            const config = getWidgetConfig();
+            const previewContainer = document.getElementById('previewContainer');
+
+            // Create mini preview
+            previewContainer.innerHTML = `
+                <div style="width: 100%; height: 100%; background: ${config.theme === 'dark' ? '#1a1a1a' : '#ffffff'}; color: ${config.theme === 'dark' ? '#ffffff' : '#1a1a1a'}; border-radius: 8px; padding: 16px; font-family: Inter, sans-serif; font-size: 12px;">
+                    <div style="font-weight: bold; margin-bottom: 8px; text-align: center;">MNQ Futures Widget Preview</div>
+                    <div style="margin-bottom: 8px;">Date: ${config.date}</div>
+                    <div style="margin-bottom: 8px;">Layout: ${config.layout}</div>
+                    <div style="margin-bottom: 8px;">Theme: ${config.theme}</div>
+                    <div>Size: ${config.width} × ${config.height}</div>
+                    <div style="display: grid; grid-template-columns: ${config.layout === 'side-by-side' ? '1fr 1fr 1fr' : '1fr'}; gap: 8px; margin-top: 12px;">
+                        <div style="background: ${config.theme === 'dark' ? '#2a2a2a' : '#f5f5f5'}; padding: 8px; border-radius: 4px; text-align: center;">30s Chart</div>
+                        <div style="background: ${config.theme === 'dark' ? '#2a2a2a' : '#f5f5f5'}; padding: 8px; border-radius: 4px; text-align: center;">5m Chart</div>
+                        <div style="background: ${config.theme === 'dark' ? '#2a2a2a' : '#f5f5f5'}; padding: 8px; border-radius: 4px; text-align: center;">15m Chart</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Check for widget mode on page load
+        function checkWidgetMode() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('widget') === 'true') {
+                // Hide controls and header for widget mode
+                document.querySelector('.header').style.display = 'none';
+                document.querySelector('.controls').style.display = 'none';
+                document.querySelector('.welcome-state').style.display = 'none';
+
+                // Apply widget configuration
+                const layout = urlParams.get('layout') || 'stacked';
+                const theme = urlParams.get('theme') || 'dark';
+                const rangePosition = urlParams.get('ranges') || 'above';
+
+                document.body.setAttribute('data-theme', theme);
+
+                // Adjust layout for widget mode
+                if (layout === 'side-by-side') {
+                    document.querySelector('.charts-container').style.gridTemplateColumns = '1fr 1fr 1fr';
+                }
+
+                // Auto-generate charts for widget mode
+                const date = urlParams.get('date');
+                if (date && !window.location.pathname.includes('share')) {
+                    document.getElementById('date').value = date;
+                    setTimeout(() => generateCharts(), 100);
+                }
+            }
+        }
+
+        // Close widget modal when clicking outside
+        window.onclick = function(event) {
+            const shareModal = document.getElementById('shareModal');
+            const widgetModal = document.getElementById('widgetModal');
+
+            if (event.target === shareModal) {
+                closeShareModal();
+            }
+            if (event.target === widgetModal) {
+                closeWidgetModal();
+            }
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeShareModal();
+                closeWidgetModal();
+            }
+        });
+
+        // Set most recent trading day as default
+        function setDefaultDate() {
+            // Get current time in Pacific Time (handles daylight saving automatically)
+            const now = new Date();
+            const pacificTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Los_Angeles"}));
+
+            const today = new Date(pacificTime);
+            const dayOfWeek = today.getDay();
+
+            // If it's weekend, go back to Friday
+            if (dayOfWeek === 6) { // Saturday
+                today.setDate(today.getDate() - 1); // Go to Friday
+            } else if (dayOfWeek === 0) { // Sunday
+                today.setDate(today.getDate() - 2); // Go to Friday
+            }
+
+            // Format date for input (YYYY-MM-DD)
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
+
+            document.getElementById('date').value = dateStr;
+        }
+
+        // Initialize
+        setDefaultDate();
+        addToggleListeners();
+        checkWidgetMode();
+
+        // Generate charts function
+        async function generateCharts() {
+            showLoading(true);
+            hideError();
+
+            const dateValue = document.getElementById('date').value;
+            const dateParam = dateValue ? `?date=${dateValue}` : '';
+
+            try {
+                const response = await fetch(`/api/mnq-data${dateParam}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Generate charts for each timeframe
+                const timeframes = [
+                    { id: '30s', label: '30-Second Chart' },
+                    { id: '5m', label: '5-Minute Chart' },
+                    { id: '15m', label: '15-Minute Chart' }
+                ];
+
+                for (const timeframe of timeframes) {
+                    const chartData = data.data[timeframe.id] || [];
+                    // Calculate ranges from data instead of expecting from backend
+                    let ranges;
+                    try {
+                        ranges = calculateRanges(data.data);
+                        console.log('Ranges calculated successfully:', ranges);
+                    } catch (error) {
+                        console.error('Error calculating ranges:', error);
+                        ranges = createDefaultRanges();
+                    }
+
+                    // Defensive: Ensure ranges is valid
+                    if (!ranges || typeof ranges !== 'object') {
+                        console.warn('Invalid ranges object, using defaults');
+                        ranges = createDefaultRanges();
+                    }
+
+                    if (chartData.length > 0) {
+                        createChart(`chart${timeframe.id}`, chartData, ranges, timeframe.id);
+                        updateRangeInfo(ranges);
+                    }
+                }
+
+                // Show the charts container after successful generation
+                document.getElementById('chartsContainer').style.display = 'block';
+
+                // Show and load winrate data
+                document.getElementById('winrateSection').style.display = 'block';
+                loadWinrateData();
+
+            } catch (error) {
+                showError(`Error: ${error.message}`);
+            } finally {
+                showLoading(false);
+                document.getElementById('generateBtn').disabled = false;
+            }
+        }
+
+        // Add window resize listener for proper chart resizing
+        window.addEventListener('resize', () => {
+            const chartIds = ['chart30s', 'chart5m', 'chart15m'];
+            chartIds.forEach(chartId => {
+                const chartElement = document.getElementById(chartId);
+                if (chartElement && chartElement.children.length > 0) {
+                    Plotly.Plots.resize(chartId);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

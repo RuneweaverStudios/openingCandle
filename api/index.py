@@ -1,4 +1,5 @@
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify, render_template
+from flask_cors import CORS
 import json
 from datetime import datetime, timedelta
 
@@ -12,1453 +13,13 @@ except ImportError:
     DEPENDENCIES_AVAILABLE = False
 
 app = Flask(__name__)
+CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5002", "http://127.0.0.1:5002"]}})
 
-# HTML template for the main page - Complete trading charts interface
-HTML_TEMPLATE = """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MNQ Futures Charts</title>
-    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #1a1a1a;
-            color: #ffffff;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            width: 100%;
-            box-sizing: border-box;
-            overflow-x: hidden;
-        }
-
-        body.charts-visible {
-            justify-content: flex-start;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .header h1 {
-            font-size: 28px;
-            color: #ffffff;
-            margin-bottom: 10px;
-        }
-
-        .controls {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-        }
-
-        .control-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        label {
-            font-size: 14px;
-            color: #cccccc;
-        }
-
-        input, button {
-            padding: 8px 12px;
-            border: 1px solid #444;
-            background-color: #2a2a2a;
-            color: #ffffff;
-            border-radius: 4px;
-        }
-
-        button {
-            background-color: #0066cc;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        button:hover {
-            background-color: #0052a3;
-        }
-
-        button:disabled {
-            background-color: #666;
-            cursor: not-allowed;
-        }
-
-        .chart-controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-        }
-
-        .share-btn {
-            background-color: #17a2b8;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .share-btn:hover {
-            background-color: #138496;
-        }
-
-        .share-modal {
-            display: none;
-            position: fixed;
-            z-index: 10000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.8);
-        }
-
-        .share-modal-content {
-            background-color: #2a2a2a;
-            margin: 5% auto;
-            padding: 30px;
-            border: 1px solid #444;
-            border-radius: 8px;
-            width: 600px;
-            max-width: 90%;
-            color: #ffffff;
-        }
-
-        .share-modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .share-modal h2 {
-            margin: 0;
-            color: #ffffff;
-        }
-
-        .close-modal {
-            color: #aaa;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-            background: none;
-            border: none;
-            padding: 0;
-        }
-
-        .close-modal:hover {
-            color: #fff;
-        }
-
-        .share-options {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .share-option {
-            background-color: #1a1a1a;
-            padding: 15px;
-            border-radius: 6px;
-            border: 1px solid #444;
-        }
-
-        .share-option h3 {
-            margin: 0 0 10px 0;
-            color: #17a2b8;
-            font-size: 14px;
-        }
-
-        .embed-code {
-            background-color: #000;
-            color: #00ff00;
-            padding: 10px;
-            border-radius: 4px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            word-break: break-all;
-            margin-top: 10px;
-            position: relative;
-        }
-
-        .copy-btn {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 4px 8px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 10px;
-        }
-
-        .copy-btn:hover {
-            background-color: #0056b3;
-        }
-
-        .copy-btn.copied {
-            background-color: #28a745;
-        }
-
-        .download-btn {
-            background-color: #dc3545;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            margin-top: 10px;
-            width: 100%;
-        }
-
-        .download-btn:hover {
-            background-color: #c82333;
-        }
-
-        .widget-modal {
-            display: none;
-            position: fixed;
-            z-index: 10000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.8);
-        }
-
-        .widget-modal-content {
-            background-color: #2a2a2a;
-            margin: 2% auto;
-            padding: 20px;
-            border: 1px solid #444;
-            border-radius: 8px;
-            width: 800px;
-            max-width: 90%;
-            max-height: 90vh;
-            overflow-y: auto;
-            color: #ffffff;
-        }
-
-        .widget-modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .widget-modal h2 {
-            margin: 0;
-            color: #ffffff;
-        }
-
-        .widget-body {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        .widget-config {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .config-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .config-group label {
-            font-weight: bold;
-            color: #ffffff;
-        }
-
-        .radio-group {
-            display: flex;
-            gap: 15px;
-        }
-
-        .radio-group label {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-weight: normal;
-            color: #cccccc;
-        }
-
-        .size-inputs {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .size-inputs input {
-            width: 80px;
-            padding: 4px 8px;
-            border: 1px solid #444;
-            background-color: #1a1a1a;
-            color: #ffffff;
-            border-radius: 4px;
-        }
-
-        .size-inputs span {
-            color: #cccccc;
-        }
-
-        .widget-preview {
-            background-color: #1a1a1a;
-            border-radius: 4px;
-            padding: 15px;
-            min-height: 120px;
-        }
-
-        .widget-code {
-            grid-column: 1 / -1;
-        }
-
-        .widget-code h3 {
-            margin: 0 0 10px 0;
-            color: #ffffff;
-        }
-
-        .widget-actions {
-            grid-column: 1 / -1;
-            display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-        }
-
-        .widget-actions button {
-            padding: 8px 16px;
-            border: 1px solid #444;
-            background-color: #1a1a1a;
-            color: #ffffff;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .widget-actions button:hover {
-            background-color: #0066cc;
-        }
-
-        .widget-actions button.primary {
-            background-color: #0066cc;
-        }
-
-        .widget-actions button.primary:hover {
-            background-color: #0052a3;
-        }
-
-        .export-container {
-            margin-top: 20px;
-            padding: 20px;
-            background-color: #2a2a2a;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        .error {
-            color: #ff6b6b;
-            text-align: center;
-            margin: 20px 0;
-        }
-
-        .charts-container {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 20px;
-            width: 100%;
-            margin: 0;
-            padding: 0;
-        }
-
-        .chart-section {
-            background-color: #2a2a2a;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            width: 100%;
-            box-sizing: border-box;
-            overflow: hidden;
-        }
-
-        .chart-title {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            color: #ffffff;
-        }
-
-        .chart {
-            height: 60vh;
-            min-height: 400px;
-        }
-
-        .range-info {
-            margin-bottom: 15px;
-            padding: 10px;
-            background-color: #1a1a1a;
-            border-radius: 4px;
-            font-size: 14px;
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 10px;
-        }
-
-        .range-box {
-            padding: 8px;
-            border-radius: 4px;
-        }
-
-        .range-box label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            color: #ffffff;
-            cursor: pointer;
-            margin-bottom: 8px;
-        }
-
-        .range-box input[type="checkbox"] {
-            margin: 0;
-            transform: scale(1.2);
-            accent-color: #0066cc;
-        }
-
-        .range-value {
-            font-size: 18px;
-            font-weight: bold;
-            color: #e8e8e8;
-            display: block;
-            text-align: center;
-            margin-top: 5px;
-            transition: all 0.3s ease;
-        }
-
-        .range-box:hover .range-value {
-            text-shadow: 0 0 8px #e8e8e8;
-        }
-
-  
-        
-        
-        
-        .loading {
-            text-align: center;
-            color: #ffffff;
-            font-size: 16px;
-        }
-
-        @media (max-width: 768px) {
-            .charts-container {
-                grid-template-columns: 1fr;
-            }
-
-            .range-info {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>📊 MNQ Futures Charts</h1>
-        <p>Micro Nasdaq Futures - Multi-Timeframe Analysis with Range Markers</p>
-    </div>
-
-    <div class="controls">
-        <div class="control-group">
-            <label for="date">Trading Date:</label>
-            <input type="date" id="date">
-        </div>
-        <button onclick="generateCharts()" id="generateBtn">Generate Charts</button>
-        <button onclick="exportAllCharts()" id="exportBtn">Export All Charts</button>
-        <button onclick="openWidgetModal()" id="widgetBtn">Create Widget</button>
-    </div>
-
-    <div id="error" class="error" style="display: none;"></div>
-    <div id="loading" class="loading" style="display: none;">Loading...</div>
-    <div class="charts-container" id="chartsContainer" style="display: none;">
-        <div class="chart-section">
-            <div class="chart-title">30-Second Chart</div>
-            <div class="chart-controls">
-                <button class="share-btn" onclick="openShareModal('30s')">Share & Embed</button>
-            </div>
-            <div class="range-info">
-                <div class="range-box range-first">
-                    <label>
-                        <input type="checkbox" id="showFirst-30s" checked> First 30s Range
-                    </label>
-                    <span id="rangeFirst-30s" class="range-value">-</span>
-                </div>
-                <div class="range-box range-5min">
-                    <label>
-                        <input type="checkbox" id="show5min-30s"> First 5min Range
-                    </label>
-                    <span id="range5min-30s" class="range-value">-</span>
-                </div>
-                <div class="range-box range-15min">
-                    <label>
-                        <input type="checkbox" id="show15min-30s"> First 15min Range
-                    </label>
-                    <span id="range15min-30s" class="range-value">-</span>
-                </div>
-            </div>
-            <div id="chart30s" class="chart"></div>
-        </div>
-
-        <div class="chart-section">
-            <div class="chart-title">5-Minute Chart</div>
-            <div class="chart-controls">
-                <button class="share-btn" onclick="openShareModal('5m')">📤 Share & Embed</button>
-            </div>
-            <div class="range-info">
-                <div class="range-box range-first">
-                    <label>
-                        <input type="checkbox" id="showFirst-5m"> First 30s Range
-                    </label>
-                    <span id="rangeFirst-5m" class="range-value">-</span>
-                </div>
-                <div class="range-box range-5min">
-                    <label>
-                        <input type="checkbox" id="show5min-5m" checked> First 5min Range
-                    </label>
-                    <span id="range5min-5m" class="range-value">-</span>
-                </div>
-                <div class="range-box range-15min">
-                    <label>
-                        <input type="checkbox" id="show15min-5m"> First 15min Range
-                    </label>
-                    <span id="range15min-5m" class="range-value">-</span>
-                </div>
-            </div>
-            <div id="chart5m" class="chart"></div>
-        </div>
-
-        <div class="chart-section">
-            <div class="chart-title">15-Minute Chart</div>
-            <div class="chart-controls">
-                <button class="share-btn" onclick="openShareModal('15m')">Share & Embed</button>
-            </div>
-            <div class="range-info">
-                <div class="range-box range-first">
-                    <label>
-                        <input type="checkbox" id="showFirst-15m"> First 30s Range
-                    </label>
-                    <span id="rangeFirst-15m" class="range-value">-</span>
-                </div>
-                <div class="range-box range-5min">
-                    <label>
-                        <input type="checkbox" id="show5min-15m"> First 5min Range
-                    </label>
-                    <span id="range5min-15m" class="range-value">-</span>
-                </div>
-                <div class="range-box range-15min">
-                    <label>
-                        <input type="checkbox" id="show15min-15m" checked> First 15min Range
-                    </label>
-                    <span id="range15min-15m" class="range-value">-</span>
-                </div>
-            </div>
-            <div id="chart15m" class="chart"></div>
-        </div>
-    </div>
-
-    <!-- Share Modal -->
-    <div id="shareModal" class="share-modal">
-        <div class="share-modal-content">
-            <div class="share-modal-header">
-                <h2 id="shareModalTitle">Share Chart</h2>
-                <button class="close-modal" onclick="closeShareModal()">&times;</button>
-            </div>
-            <div class="share-options">
-                <div class="share-option">
-                    <h3>📷 Download as PNG</h3>
-                    <p>Save chart as high-quality image</p>
-                    <button class="download-btn" onclick="downloadChartAsPNG()">Download PNG</button>
-                </div>
-                <div class="share-option">
-                    <h3>🔗 Copy Link</h3>
-                    <p>Share direct link to this chart</p>
-                    <div class="embed-code" id="shareLink">
-                        <button class="copy-btn" onclick="copyToClipboard('shareLink')">Copy</button>
-                    </div>
-                </div>
-                <div class="share-option">
-                    <h3>📋 Embed Code</h3>
-                    <p>Embed this chart in your website</p>
-                    <div class="embed-code" id="embedCode">
-                        <button class="copy-btn" onclick="copyToClipboard('embedCode')">Copy</button>
-                    </div>
-                </div>
-                <div class="share-option">
-                    <h3>📱 QR Code</h3>
-                    <p>Quick mobile access</p>
-                    <div id="qrCode"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Widget Modal -->
-    <div id="widgetModal" class="widget-modal">
-        <div class="widget-modal-content">
-            <div class="widget-modal-header">
-                <h2>Create Widget Embed</h2>
-                <button class="close-modal" onclick="closeWidgetModal()">&times;</button>
-            </div>
-            <div class="widget-body">
-                <div class="widget-config">
-                    <div class="config-group">
-                        <label>Layout:</label>
-                        <div class="radio-group">
-                            <label><input type="radio" name="layout" value="stacked" checked> Stacked</label>
-                            <label><input type="radio" name="layout" value="side-by-side"> Side by Side</label>
-                        </div>
-                    </div>
-                    <div class="config-group">
-                        <label>Theme:</label>
-                        <div class="radio-group">
-                            <label><input type="radio" name="theme" value="dark" checked> Dark</label>
-                            <label><input type="radio" name="theme" value="light"> Light</label>
-                        </div>
-                    </div>
-                    <div class="config-group">
-                        <label>Range Position:</label>
-                        <div class="radio-group">
-                            <label><input type="radio" name="rangePosition" value="above" checked> Above Charts</label>
-                            <label><input type="radio" name="rangePosition" value="below"> Below Charts</label>
-                        </div>
-                    </div>
-                    <div class="config-group">
-                        <label>Dimensions:</label>
-                        <div class="size-inputs">
-                            <input type="number" id="widgetWidth" value="800" min="400" max="1200">
-                            <span>×</span>
-                            <input type="number" id="widgetHeight" value="600" min="300" max="1000">
-                        </div>
-                    </div>
-                </div>
-                <div class="widget-preview">
-                    <div id="previewContainer"></div>
-                </div>
-                <div class="widget-code">
-                    <h3>Embed Code:</h3>
-                    <div id="widgetEmbedCode" class="embed-code"></div>
-                </div>
-                <div class="widget-actions">
-                    <button onclick="previewWidget()">Preview Widget</button>
-                    <button onclick="copyWidgetCode()" class="primary">Copy Embed Code</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    
-    <script>
-        // Set most recent trading day as default
-        function setDefaultDate() {
-            const pacific = new Date();
-            const utc = pacific.getTime() + pacific.getTimezoneOffset() * 60000;
-            const pacificTime = new Date(utc - 480 * 60000); // UTC-8 for Pacific
-            const dayOfWeek = pacificTime.getDay();
-
-            // If it's evening in Pacific (after market close), use today
-            // If it's morning before market close or weekend, use last trading day
-            let targetDate = new Date(pacificTime);
-
-            // If weekend, go back to Friday
-            if (dayOfWeek === 0) { // Sunday
-                targetDate.setDate(targetDate.getDate() - 2);
-            } else if (dayOfWeek === 6) { // Saturday
-                targetDate.setDate(targetDate.getDate() - 1);
-            }
-
-            // If it's Sunday evening after 6 PM PT, it might show Monday
-            // Let's check if the date is in the future and adjust if needed
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            targetDate.setHours(0, 0, 0, 0);
-
-            if (targetDate > today) {
-                // If the calculated date is in the future, use today
-                targetDate = today;
-                // If today is weekend, go back to Friday
-                const todayDayOfWeek = targetDate.getDay();
-                if (todayDayOfWeek === 0) { // Sunday
-                    targetDate.setDate(targetDate.getDate() - 2);
-                } else if (todayDayOfWeek === 6) { // Saturday
-                    targetDate.setDate(targetDate.getDate() - 1);
-                }
-            }
-
-            document.getElementById('date').value = targetDate.toISOString().split('T')[0];
-        }
-
-        // Generate charts
-        async function generateCharts() {
-            const date = document.getElementById('date').value;
-
-            if (!date) {
-                showError('Please select a date');
-                return;
-            }
-
-            hideError();
-            showLoading(true);
-            document.getElementById('generateBtn').disabled = true;
-
-            try {
-                const response = await fetch(`/api/mnq-data?date=${date}`);
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Failed to fetch data');
-                }
-
-                const data = await response.json();
-
-                // Store chart data globally for toggle listeners
-                window.currentChartData = data.data;
-
-                // Calculate ranges
-                const ranges = calculateRanges(data.data);
-
-                // Create charts
-                createChart('chart30s', data.data['30s'], ranges, '30s');
-                createChart('chart5m', data.data['5m'], ranges, '5m');
-                createChart('chart15m', data.data['15m'], ranges, '15m');
-
-                // Update range info
-                updateRangeInfo(ranges);
-
-                // Show the charts container after successful generation
-                document.getElementById('chartsContainer').style.display = 'block';
-                document.body.classList.add('charts-visible');
-
-            } catch (error) {
-                showError(`Error: ${error.message}`);
-            } finally {
-                showLoading(false);
-                document.getElementById('generateBtn').disabled = false;
-            }
-        }
-
-  
-        function calculateRanges(data) {
-            console.log('=== DEBUG: calculateRanges called ===');
-            console.log('30s data length:', data['30s']?.length || 0);
-            console.log('5m data length:', data['5m']?.length || 0);
-            console.log('15m data length:', data['15m']?.length || 0);
-
-            // Find first 5min and 15min candles
-            const first5min = data['5m'][0];
-            const first15min = data['15m'][0];
-
-            console.log('First 5min candle:', first5min);
-            console.log('First 15min candle:', first15min);
-
-            // Calculate first 30-second candle range (just the first candle)
-            let first30sRange = { high: 0, low: 0, range: '0' };
-            if (data['30s'] && data['30s'].length >= 1) {
-                const firstCandle = data['30s'][0];
-                first30sRange.high = firstCandle.high;
-                first30sRange.low = firstCandle.low;
-                first30sRange.range = (first30sRange.high - first30sRange.low).toFixed(2);
-                console.log('First 30s candle:', firstCandle);
-                console.log('First 30s range:', first30sRange);
-            }
-
-            // Calculate first 5min range from 30-second data (10 candles = 5 minutes)
-            let first5minRange = { high: 0, low: 0, range: '0' };
-            if (data['30s'] && data['30s'].length >= 10) {
-                // Get first 10 thirty-second candles (5 minutes)
-                const first10ThirtySec = data['30s'].slice(0, 10);
-                console.log('First 10 thirty-second candles:', first10ThirtySec);
-
-                first5minRange.high = Math.max(...first10ThirtySec.map(c => c.high));
-                first5minRange.low = Math.min(...first10ThirtySec.map(c => c.low));
-                first5minRange.range = (first5minRange.high - first5minRange.low).toFixed(2);
-
-                console.log('Calculated 5min range:', first5minRange);
-            } else {
-                console.log('Not enough 30s data for 5min range. Available:', data['30s']?.length || 0);
-            }
-
-            // Calculate first 15min range from 30-second data (30 candles = 15 minutes)
-            let first15minRange = { high: 0, low: 0, range: '0' };
-            if (data['30s'] && data['30s'].length >= 30) {
-                // Get first 30 thirty-second candles (15 minutes)
-                const first30ThirtySec = data['30s'].slice(0, 30);
-                console.log('First 30 thirty-second candles count:', first30ThirtySec.length);
-
-                first15minRange.high = Math.max(...first30ThirtySec.map(c => c.high));
-                first15minRange.low = Math.min(...first30ThirtySec.map(c => c.low));
-                first15minRange.range = (first15minRange.high - first15minRange.low).toFixed(2);
-
-                console.log('Calculated 15min range:', first15minRange);
-            } else {
-                console.log('Not enough 30s data for 15min range. Available:', data['30s']?.length || 0);
-            }
-
-            const result = {
-                'first': first30sRange,
-                '5min': first5minRange,
-                '15min': first15minRange
-            };
-
-            console.log('Final result:', result);
-            console.log('=== END DEBUG ===');
-
-            return result;
-        }
-
-        function createChart(elementId, candleData, ranges, timeframe) {
-            if (!candleData || candleData.length === 0) {
-                document.getElementById(elementId).innerHTML = '<div style="text-align: center; padding: 50px;">No data available</div>';
-                return;
-            }
-
-            // Convert timestamps to Pacific time for display
-            const times = candleData.map(c => {
-                // Parse the timestamp - it should already be in Pacific time from the backend
-                const date = new Date(c.timestamp);
-                return date;
-            });
-            const opens = candleData.map(c => c.open);
-            const highs = candleData.map(c => c.high);
-            const lows = candleData.map(c => c.low);
-            const closes = candleData.map(c => c.close);
-
-            // Determine first candle color for indicators
-            const firstCandleClose = closes[0];
-            const firstCandleOpen = opens[0];
-            const isFirstCandleGreen = firstCandleClose >= firstCandleOpen;
-
-            const trace = {
-                x: times,
-                open: opens,
-                high: highs,
-                low: lows,
-                close: closes,
-                type: 'candlestick',
-                name: 'MNQ',
-                increasing: {line: {color: '#00ff00'}},
-                decreasing: {line: {color: '#ff0000'}}
-            };
-
-            // Add range lines based on toggle states
-            const shapes = [];
-            const annotations = [];
-
-            // Check toggle states for this specific chart
-            const showFirst = document.getElementById(`showFirst-${timeframe}`)?.checked ?? true;
-            const show5min = document.getElementById(`show5min-${timeframe}`)?.checked ?? true;
-            const show15min = document.getElementById(`show15min-${timeframe}`)?.checked ?? true;
-
-            // First 30s candle range - show across the entire chart
-            if (showFirst && ranges['first'].high > 0) {
-                shapes.push(
-                    {
-                        type: 'line',
-                        x0: times[0],
-                        x1: times[times.length - 1], // Show across entire chart
-                        y0: ranges['first'].high,
-                        y1: ranges['first'].high,
-                        line: {color: '#e74c3c', width: 3, dash: 'solid'}
-                    },
-                    {
-                        type: 'line',
-                        x0: times[0],
-                        x1: times[times.length - 1], // Show across entire chart
-                        y0: ranges['first'].low,
-                        y1: ranges['first'].low,
-                        line: {color: '#e74c3c', width: 3, dash: 'solid'}
-                    }
-                );
-                // Left side annotation
-                annotations.push({
-                    x: 0.02,
-                    y: 0.98,
-                    xref: 'paper',
-                    yref: 'paper',
-                    text: `First 30s: ${ranges['first'].low}-${ranges['first'].high}`,
-                    showarrow: false,
-                    font: {color: isFirstCandleGreen ? '#27ae60' : '#e74c3c', size: 14, weight: 'bold'},
-                    xanchor: 'left',
-                    yanchor: 'top',
-                    bgcolor: 'rgba(26, 26, 26, 0.8)',
-                    bordercolor: isFirstCandleGreen ? '#27ae60' : '#e74c3c',
-                    borderwidth: 1,
-                    borderpad: 4
-                });
-                  }
-
-            // 5min range (blue)
-            if (show5min && ranges['5min'].high > 0) {
-                shapes.push(
-                    {
-                        type: 'line',
-                        x0: times[0],
-                        x1: times[times.length - 1],
-                        y0: ranges['5min'].high,
-                        y1: ranges['5min'].high,
-                        line: {color: '#3498db', width: 2, dash: 'dash'}
-                    },
-                    {
-                        type: 'line',
-                        x0: times[0],
-                        x1: times[times.length - 1],
-                        y0: ranges['5min'].low,
-                        y1: ranges['5min'].low,
-                        line: {color: '#3498db', width: 2, dash: 'dash'}
-                    }
-                );
-                // Left side annotation for 5min
-                annotations.push({
-                    x: 0.02,
-                    y: showFirst ? 0.92 : 0.98, // Adjust position based on first candle visibility
-                    xref: 'paper',
-                    yref: 'paper',
-                    text: `5min: ${ranges['5min'].low}-${ranges['5min'].high}`,
-                    showarrow: false,
-                    font: {color: '#3498db', size: 14, weight: 'bold'},
-                    xanchor: 'left',
-                    yanchor: 'top',
-                    bgcolor: 'rgba(26, 26, 26, 0.8)',
-                    bordercolor: '#3498db',
-                    borderwidth: 1,
-                    borderpad: 4
-                });
-                }
-
-            // 15min range (green)
-            if (show15min && ranges['15min'].high > 0) {
-                shapes.push(
-                    {
-                        type: 'line',
-                        x0: times[0],
-                        x1: times[times.length - 1],
-                        y0: ranges['15min'].high,
-                        y1: ranges['15min'].high,
-                        line: {color: '#27ae60', width: 2, dash: 'dash'}
-                    },
-                    {
-                        type: 'line',
-                        x0: times[0],
-                        x1: times[times.length - 1],
-                        y0: ranges['15min'].low,
-                        y1: ranges['15min'].low,
-                        line: {color: '#27ae60', width: 2, dash: 'dash'}
-                    }
-                );
-                const yPosition = showFirst ? 0.86 : (show5min ? 0.92 : 0.98); // Adjust position based on visibility
-                // Left side annotation for 15min
-                annotations.push({
-                    x: 0.02,
-                    y: yPosition,
-                    xref: 'paper',
-                    yref: 'paper',
-                    text: `15min: ${ranges['15min'].low}-${ranges['15min'].high}`,
-                    showarrow: false,
-                    font: {color: '#27ae60', size: 14, weight: 'bold'},
-                    xanchor: 'left',
-                    yanchor: 'top',
-                    bgcolor: 'rgba(26, 26, 26, 0.8)',
-                    bordercolor: '#27ae60',
-                    borderwidth: 1,
-                    borderpad: 4
-                });
-                  }
-
-            const layout = {
-                title: `MNQ Futures - ${timeframe.toUpperCase()} (${document.getElementById('date').value || new Date().toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'})} PT)`,
-                titlefont: {color: '#ffffff', size: 14},
-                paper_bgcolor: '#2a2a2a',
-                plot_bgcolor: '#1a1a1a',
-                font: {color: '#ffffff'},
-                xaxis: {
-                    rangeslider: {visible: false},
-                    gridcolor: '#444',
-                    type: 'date',
-                    tickformat: '%H:%M', // Show time in HH:MM format
-                    tickfont: {color: '#ffffff', size: 9},
-                    showgrid: true,
-                    dtick: 3600000, // Tick every hour
-                    tick0: '06:30' // Start at 6:30 AM
-                },
-                yaxis: {
-                    gridcolor: '#444',
-                    tickfont: {color: '#ffffff', size: 10},
-                    autorange: true
-                },
-                margin: {t: 50, r: 20, b: 60, l: 70}, // Increased top margin for title
-                shapes: shapes,
-                annotations: annotations
-            };
-
-            const config = {
-                responsive: true,
-                displayModeBar: true,
-                modeBarButtonsToRemove: ['toImage', 'sendDataToCloud', 'editInChartStudio', 'lasso2d', 'select2d'],
-                displaylogo: false
-            };
-
-            Plotly.newPlot(elementId, [trace], layout, config);
-
-            // Force a redraw to ensure proper sizing
-            setTimeout(() => {
-                Plotly.Plots.resize(elementId);
-            }, 100);
-        }
-
-        function updateRangeInfo(ranges) {
-            // Update all range displays
-            const rangeFirstText = `${ranges['first'].low} - ${ranges['first'].high} (Range: ${ranges['first'].range})`;
-            const range5minText = `${ranges['5min'].low} - ${ranges['5min'].high} (Range: ${ranges['5min'].range})`;
-            const range15minText = `${ranges['15min'].low} - ${ranges['15min'].high} (Range: ${ranges['15min'].range})`;
-
-            // Update 30s chart
-            document.getElementById('rangeFirst-30s').textContent = rangeFirstText;
-            document.getElementById('range5min-30s').textContent = range5minText;
-            document.getElementById('range15min-30s').textContent = range15minText;
-
-            // Update 5m chart
-            document.getElementById('rangeFirst-5m').textContent = rangeFirstText;
-            document.getElementById('range5min-5m').textContent = range5minText;
-            document.getElementById('range15min-5m').textContent = range15minText;
-
-            // Update 15m chart
-            document.getElementById('rangeFirst-15m').textContent = rangeFirstText;
-            document.getElementById('range5min-15m').textContent = range5minText;
-            document.getElementById('range15min-15m').textContent = range15minText;
-        }
-
-        // Export all charts as images
-        async function exportAllCharts() {
-            const date = document.getElementById('date').value || 'unknown';
-            const ticker = 'MNQ';
-
-            try {
-                // Create a combined container
-                const exportContainer = document.createElement('div');
-                exportContainer.style.cssText = `
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: white;
-                    z-index: 9999;
-                    padding: 20px;
-                    overflow-y: auto;
-                `;
-
-                // Add title and date
-                const header = document.createElement('div');
-                header.innerHTML = `
-                    <h1 style="color: #333; text-align: center; margin-bottom: 10px;">
-                        ${ticker} Futures Charts - ${date}
-                    </h1>
-                    <p style="color: #666; text-align: center; margin-bottom: 30px;">
-                        <strong>First 5min Range:</strong> ${document.getElementById('range5min-30s').textContent} |
-                        <strong>First 15min Range:</strong> ${document.getElementById('range15min-30s').textContent}
-                    </p>
-                `;
-                exportContainer.appendChild(header);
-
-                // Get all three charts
-                const chartIds = ['chart30s', 'chart5m', 'chart15m'];
-                const titles = ['30-Second Chart', '5-Minute Chart', '15-Minute Chart'];
-
-                for (let i = 0; i < chartIds.length; i++) {
-                    const chartElement = document.getElementById(chartIds[i]);
-                    const chartSection = document.createElement('div');
-                    chartSection.style.cssText = 'margin-bottom: 40px; background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;';
-
-                    // Add chart title
-                    const chartTitle = document.createElement('h3');
-                    chartTitle.textContent = titles[i];
-                    chartTitle.style.cssText = 'color: #333; text-align: center; margin: 15px 0; font-size: 18px;';
-                    chartSection.appendChild(chartTitle);
-
-                    // Clone the chart
-                    const chartClone = chartElement.cloneNode(true);
-                    chartClone.style.cssText = 'height: 400px; width: 100%; background: white;';
-                    chartSection.appendChild(chartClone);
-
-                    exportContainer.appendChild(chartSection);
-                }
-
-                // Add export instructions
-                const instructions = document.createElement('div');
-                instructions.innerHTML = `
-                    <p style="color: #666; text-align: center; margin-top: 30px;">
-                        Use your browser's print function (Cmd+P or Ctrl+P) to save as PDF, or take screenshots
-                    </p>
-                    <button onclick="this.parentElement.parentElement.remove()" style="
-                        display: block;
-                        margin: 20px auto;
-                        padding: 10px 20px;
-                        background: #dc3545;
-                        color: white;
-                        border: none;
-                        border-radius: 4px;
-                        cursor: pointer;
-                        font-size: 16px;
-                    ">Close Export View</button>
-                `;
-                exportContainer.appendChild(instructions);
-
-                document.body.appendChild(exportContainer);
-
-                // Redraw charts in the new container
-                for (let i = 0; i < chartIds.length; i++) {
-                    const chartClone = exportContainer.querySelectorAll('.plotly')[i];
-                    if (window.Plotly && chartClone) {
-                        // This will require re-plotting with white background
-                        // For now, the clone should work for screenshots
-                    }
-                }
-
-            } catch (error) {
-                showError('Export failed: ' + error.message);
-            }
-        }
-
-        function showError(message) {
-            const errorEl = document.getElementById('error');
-            errorEl.textContent = message;
-            errorEl.style.display = 'block';
-        }
-
-        function hideError() {
-            document.getElementById('error').style.display = 'none';
-        }
-
-        function showLoading(show) {
-            document.getElementById('loading').style.display = show ? 'block' : 'none';
-        }
-
-        // Add event listeners for checkboxes
-        function addToggleListeners() {
-            const timeframes = ['30s', '5m', '15m'];
-            const ranges = ['First', '5min', '15min'];
-
-            timeframes.forEach(timeframe => {
-                ranges.forEach(range => {
-                    const checkbox = document.getElementById(`show${range}-${timeframe}`);
-                    if (checkbox) {
-                        checkbox.addEventListener('change', () => {
-                            // Re-create chart when toggle changes
-                            const chartData = window.currentChartData;
-                            if (chartData) {
-                                const currentRanges = calculateRanges(chartData);
-                                createChart(`chart${timeframe}`, chartData[timeframe], currentRanges, timeframe);
-                            }
-                        });
-                    }
-                });
-            });
-        }
-
-        // Sharing functionality
-        let currentShareChart = null;
-
-        function openShareModal(timeframe) {
-            currentShareChart = timeframe;
-            const modal = document.getElementById('shareModal');
-            const title = document.getElementById('shareModalTitle');
-
-            // Set modal title
-            const chartNames = {
-                '30s': '30-Second Chart',
-                '5m': '5-Minute Chart',
-                '15m': '15-Minute Chart'
-            };
-            title.textContent = `Share ${chartNames[timeframe]}`;
-
-            // Generate share link
-            const date = document.getElementById('date').value || new Date().toISOString().split('T')[0];
-            const baseUrl = window.location.origin + window.location.pathname;
-            const shareUrl = `${baseUrl}?date=${date}&chart=${timeframe}`;
-
-            document.getElementById('shareLink').textContent = shareUrl;
-
-            // Generate embed code
-            const embedCode = `<iframe src="${shareUrl}" width="800" height="600" frameborder="0"></iframe>`;
-            document.getElementById('embedCode').textContent = embedCode;
-
-            // Generate QR code
-            generateQRCode(shareUrl);
-
-            // Show modal
-            modal.style.display = 'block';
-        }
-
-        function closeShareModal() {
-            document.getElementById('shareModal').style.display = 'none';
-            currentShareChart = null;
-        }
-
-        async function downloadChartAsPNG() {
-            if (!currentShareChart) return;
-
-            try {
-                const chartId = `chart${currentShareChart}`;
-
-                // Use Plotly's download functionality
-                await Plotly.downloadImage(chartId, {
-                    format: 'png',
-                    width: 1200,
-                    height: 600,
-                    filename: `MNQ_${currentShareChart}_${new Date().toISOString().split('T')[0]}`
-                });
-
-            } catch (error) {
-                alert('Download failed: ' + error.message);
-            }
-        }
-
-        function copyToClipboard(elementId) {
-            const element = document.getElementById(elementId);
-            const text = element.textContent;
-            const button = element.querySelector('.copy-btn');
-
-            navigator.clipboard.writeText(text).then(() => {
-                const originalText = button.textContent;
-                button.textContent = 'Copied!';
-                button.classList.add('copied');
-
-                setTimeout(() => {
-                    button.textContent = originalText;
-                    button.classList.remove('copied');
-                }, 2000);
-            }).catch(err => {
-                alert('Failed to copy: ' + err);
-            });
-        }
-
-        function generateQRCode(url) {
-            const qrDiv = document.getElementById('qrCode');
-
-            // Use a simple QR code API
-            const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(url)}`;
-
-            qrDiv.innerHTML = `<img src="${qrImageUrl}" alt="QR Code" style="max-width: 100%; height: auto;">`;
-        }
-
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            const modal = document.getElementById('shareModal');
-            if (event.target === modal) {
-                closeShareModal();
-            }
-        }
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') {
-                closeShareModal();
-            }
-        });
-
-        function addToggleListeners() {
-            // Add click event listeners to all range-boxes
-            document.querySelectorAll('.range-box').forEach(box => {
-                box.addEventListener('click', function(e) {
-                    // Prevent the click from firing twice if clicking on the checkbox itself
-                    if (e.target.type !== 'checkbox') {
-                        const checkbox = this.querySelector('input[type="checkbox"]');
-                        if (checkbox) {
-                            checkbox.checked = !checkbox.checked;
-                            // Trigger change event to update the chart
-                            checkbox.dispatchEvent(new Event('change'));
-                        }
-                    }
-                });
-            });
-        }
-
-        
-        // Widget Modal Functions
-        function openWidgetModal() {
-            const modal = document.getElementById('widgetModal');
-            modal.style.display = 'block';
-            generateWidgetCode(); // Auto-generate initial code
-        }
-
-        function closeWidgetModal() {
-            document.getElementById('widgetModal').style.display = 'none';
-        }
-
-        function getWidgetConfig() {
-            const layout = document.querySelector('input[name="layout"]:checked').value;
-            const theme = document.querySelector('input[name="theme"]:checked').value;
-            const rangePosition = document.querySelector('input[name="rangePosition"]:checked').value;
-            const width = document.getElementById('widgetWidth').value;
-            const height = document.getElementById('widgetHeight').value;
-
-            return {
-                layout,
-                theme,
-                rangePosition,
-                width,
-                height,
-                date: document.getElementById('date').value || new Date().toISOString().split('T')[0]
-            };
-        }
-
-        function generateWidgetCode() {
-            const config = getWidgetConfig();
-            const baseUrl = window.location.origin + window.location.pathname;
-
-            // Generate embed code with configuration
-            const widgetUrl = `${baseUrl}?widget=true&date=${config.date}&layout=${config.layout}&theme=${config.theme}&ranges=${config.rangePosition}`;
-
-            const iframeCode = `<iframe src="${widgetUrl}" width="${config.width}" height="${config.height}" frameborder="0" style="border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);"></iframe>`;
-
-            const embedElement = document.getElementById('widgetEmbedCode');
-            embedElement.innerHTML = `
-                <button class="copy-btn" onclick="copyWidgetCode()">Copy</button>
-                <div style="white-space: pre-wrap; word-break: break-all;">${iframeCode}</div>
-            `;
-        }
-
-        function copyWidgetCode() {
-            const embedElement = document.getElementById('widgetEmbedCode');
-            const codeText = embedElement.textContent.replace('Copy', '').trim();
-
-            navigator.clipboard.writeText(codeText).then(() => {
-                const button = embedElement.querySelector('.copy-btn');
-                const originalText = button.textContent;
-                button.textContent = 'Copied!';
-                button.classList.add('copied');
-
-                setTimeout(() => {
-                    button.textContent = originalText;
-                    button.classList.remove('copied');
-                }, 2000);
-            }).catch(err => {
-                alert('Failed to copy: ' + err);
-            });
-        }
-
-        function previewWidget() {
-            const config = getWidgetConfig();
-            const previewContainer = document.getElementById('previewContainer');
-
-            // Create mini preview
-            previewContainer.innerHTML = `
-                <div style="width: 100%; height: 100%; background: ${config.theme === 'dark' ? '#1a1a1a' : '#ffffff'}; color: ${config.theme === 'dark' ? '#ffffff' : '#1a1a1a'}; border-radius: 8px; padding: 16px; font-family: Inter, sans-serif; font-size: 12px;">
-                    <div style="font-weight: bold; margin-bottom: 8px; text-align: center;">MNQ Futures Widget Preview</div>
-                    <div style="margin-bottom: 8px;">Date: ${config.date}</div>
-                    <div style="margin-bottom: 8px;">Layout: ${config.layout}</div>
-                    <div style="margin-bottom: 8px;">Theme: ${config.theme}</div>
-                    <div>Size: ${config.width} × ${config.height}</div>
-                    <div style="display: grid; grid-template-columns: ${config.layout === 'side-by-side' ? '1fr 1fr 1fr' : '1fr'}; gap: 8px; margin-top: 12px;">
-                        <div style="background: ${config.theme === 'dark' ? '#2a2a2a' : '#f5f5f5'}; padding: 8px; border-radius: 4px; text-align: center;">30s Chart</div>
-                        <div style="background: ${config.theme === 'dark' ? '#2a2a2a' : '#f5f5f5'}; padding: 8px; border-radius: 4px; text-align: center;">5m Chart</div>
-                        <div style="background: ${config.theme === 'dark' ? '#2a2a2a' : '#f5f5f5'}; padding: 8px; border-radius: 4px; text-align: center;">15m Chart</div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Check for widget mode on page load
-        function checkWidgetMode() {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('widget') === 'true') {
-                // Hide controls and header for widget mode
-                document.querySelector('.header').style.display = 'none';
-                document.querySelector('.controls').style.display = 'none';
-                document.querySelector('.welcome-state').style.display = 'none';
-
-                // Apply widget configuration
-                const layout = urlParams.get('layout') || 'stacked';
-                const theme = urlParams.get('theme') || 'dark';
-                const rangePosition = urlParams.get('ranges') || 'above';
-
-                document.body.setAttribute('data-theme', theme);
-
-                // Adjust layout for widget mode
-                if (layout === 'side-by-side') {
-                    document.querySelector('.charts-container').style.gridTemplateColumns = '1fr 1fr 1fr';
-                }
-
-                // Auto-generate charts for widget mode
-                const date = urlParams.get('date');
-                if (date && !window.location.pathname.includes('share')) {
-                    document.getElementById('date').value = date;
-                    setTimeout(() => generateCharts(), 100);
-                }
-            }
-        }
-
-        // Close widget modal when clicking outside
-        window.onclick = function(event) {
-            const shareModal = document.getElementById('shareModal');
-            const widgetModal = document.getElementById('widgetModal');
-
-            if (event.target === shareModal) {
-                closeShareModal();
-            }
-            if (event.target === widgetModal) {
-                closeWidgetModal();
-            }
-        }
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') {
-                closeShareModal();
-                closeWidgetModal();
-            }
-        });
-
-        // Initialize
-        setDefaultDate();
-        addToggleListeners();
-        checkWidgetMode();
-
-        // Add window resize listener for proper chart resizing
-        window.addEventListener('resize', () => {
-            const chartIds = ['chart30s', 'chart5m', 'chart15m'];
-            chartIds.forEach(chartId => {
-                const chartElement = document.getElementById(chartId);
-                if (chartElement && chartElement.children.length > 0) {
-                    Plotly.Plots.resize(chartId);
-                }
-            });
-        });
-    </script>
-</body>
-</html>"""
 
 @app.route('/')
 def home():
     """Serve the main HTML page"""
-    return render_template_string(HTML_TEMPLATE)
+    return render_template('dark_theme.html')
 
 def get_market_data(target_date):
     """Fetch MNQ futures data from Yahoo Finance"""
@@ -1599,6 +160,110 @@ def create_30second_data(df):
 
     return candles_30s
 
+def calculate_first_candle_winrate(days=7):
+    """Calculate historical winrate of first candle strategy"""
+    if not DEPENDENCIES_AVAILABLE:
+        return {'error': 'Dependencies not available'}
+
+    try:
+        winrate_data = []
+        pacific = pytz.timezone('America/Los_Angeles')
+
+        for i in range(days):
+            target_date = (datetime.now(pacific) - timedelta(days=i)).date()
+
+            try:
+                # Get data for the specific date
+                market_data = yf.download('MNQ=F', start=target_date, end=target_date + timedelta(days=1),
+                                       interval='1m', progress=False)
+
+                if market_data.empty:
+                    continue
+
+                df = pd.DataFrame({
+                    'timestamp': market_data.index,
+                    'open': market_data['Open'],
+                    'high': market_data['High'],
+                    'low': market_data['Low'],
+                    'close': market_data['Close'],
+                    'volume': market_data['Volume']
+                })
+
+                df = df.reset_index(drop=True)
+
+                # Create 30-second data
+                candles_30s = create_30second_data(df)
+
+                if len(candles_30s) < 2:
+                    continue
+
+                # Analyze first candle strategy
+                first_candle = candles_30s[0]
+                first_range = first_candle['high'] - first_candle['low']
+                first_direction = 'up' if first_candle['close'] >= first_candle['open'] else 'down'
+
+                wins = 0
+                losses = 0
+
+                # Check subsequent candles against first candle range
+                for candle in candles_30s[1:]:
+                    # Strategy: Price breaks first candle high/low
+                    if candle['high'] > first_candle['high']:
+                        if first_direction == 'up':
+                            wins += 1
+                        else:
+                            losses += 1
+                    elif candle['low'] < first_candle['low']:
+                        if first_direction == 'down':
+                            wins += 1
+                        else:
+                            losses += 1
+
+                total_trades = wins + losses
+                winrate = (wins / total_trades * 100) if total_trades > 0 else 0
+
+                winrate_data.append({
+                    'date': target_date.strftime('%Y-%m-%d'),
+                    'first_candle': {
+                        'open': round(first_candle['open'], 2),
+                        'high': round(first_candle['high'], 2),
+                        'low': round(first_candle['low'], 2),
+                        'close': round(first_candle['close'], 2),
+                        'range': round(first_range, 2),
+                        'direction': first_direction
+                    },
+                    'trades': total_trades,
+                    'wins': wins,
+                    'losses': losses,
+                    'winrate': round(winrate, 1)
+                })
+
+            except Exception as e:
+                print(f"Error processing date {target_date}: {e}")
+                continue
+
+        # Calculate overall statistics
+        if winrate_data:
+            total_days = len(winrate_data)
+            total_wins = sum(d['wins'] for d in winrate_data)
+            total_losses = sum(d['losses'] for d in winrate_data)
+            overall_winrate = sum(d['winrate'] for d in winrate_data) / total_days
+            winning_days = sum(1 for d in winrate_data if d['winrate'] > 50)
+
+            return {
+                'overall_winrate': round(overall_winrate, 1),
+                'winning_days': winning_days,
+                'total_days': total_days,
+                'total_wins': total_wins,
+                'total_losses': total_losses,
+                'daily_breakdown': winrate_data
+            }
+        else:
+            return {'error': 'No data available for the past 7 days'}
+
+    except Exception as e:
+        return {'error': f'Failed to calculate winrate: {str(e)}'}
+
 @app.route('/api/test', methods=['GET'])
 def test():
     """Test endpoint with full yfinance functionality"""
@@ -1661,6 +326,1408 @@ def get_mnq_data():
             'message': str(e),
             'data': {'30s': [], '5m': [], '15m': []}
         }), 500
+
+@app.route('/api/winrate', methods=['GET'])
+def get_winrate():
+    """Get historical winrate for first candle strategy"""
+    try:
+        winrate_data = calculate_first_candle_winrate()
+        return jsonify(winrate_data), 200
+    except Exception as e:
+        return jsonify({
+            'error': 'Failed to fetch winrate data',
+            'message': str(e)
+        }), 500
+
+@app.route('/white-theme')
+def white_theme():
+    """White theme version of the application"""
+    return render_template_string('''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MNQ Futures Charts - White Theme</title>
+    <script src="https://cdn.plot.ly/plotly-2.33.0.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #ffffff;
+            color: #333333;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #6c757d;
+            font-size: 16px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-group label {
+            font-weight: 500;
+            color: #495057;
+        }
+
+        input[type="date"] {
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #generateBtn {
+            background: #007bff;
+            color: white;
+        }
+
+        #generateBtn:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+
+        #exportBtn {
+            background: #28a745;
+            color: white;
+        }
+
+        #exportBtn:hover {
+            background: #218838;
+            transform: translateY(-1px);
+        }
+
+        #widgetBtn {
+            background: #17a2b8;
+            color: white;
+        }
+
+        #widgetBtn:hover {
+            background: #138496;
+            transform: translateY(-1px);
+        }
+
+        #themeToggleBtn {
+            background: #6c757d;
+            color: white;
+        }
+
+        #themeToggleBtn:hover {
+            background: #5a6268;
+            transform: translateY(-1px);
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            text-align: center;
+            border-left: 4px solid #dc3545;
+        }
+
+        .loading {
+            background: #e2e3e5;
+            color: #495057;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            text-align: center;
+            font-style: italic;
+        }
+
+        .winrate-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .winrate-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .winrate-header h3 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 18px;
+        }
+
+        .refresh-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            background: #0056b3;
+        }
+
+        .winrate-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .winrate-loading {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        .winrate-summary {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+            text-align: center;
+        }
+
+        .winrate-overall {
+            background: linear-gradient(135deg, #ffffff 0%, #f1f3f4 100%);
+            color: #2c3e50;
+            padding: 25px;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+        }
+
+        .winrate-overall h4 {
+            margin: 0 0 15px 0;
+            font-size: 16px;
+            color: #495057;
+        }
+
+        .winrate-percentage {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .winrate-percentage.good {
+            color: #28a745;
+        }
+
+        .winrate-percentage.bad {
+            color: #dc3545;
+        }
+
+        .winrate-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .winrate-stat {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .winrate-stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            display: block;
+            color: #2c3e50;
+        }
+
+        .winrate-stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .daily-breakdown {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+
+        .daily-breakdown h4 {
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+
+        .daily-winrate-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f3f4;
+        }
+
+        .daily-winrate-item:last-child {
+            border-bottom: none;
+        }
+
+        .daily-date {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .daily-candle {
+            font-size: 12px;
+            color: #6c757d;
+            margin-left: 10px;
+        }
+
+        .daily-stats {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .winrate-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .winrate-badge.good {
+            background: #28a745;
+        }
+
+        .winrate-badge.bad {
+            background: #dc3545;
+        }
+
+        .winrate-badge.neutral {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .winrate-trades {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .charts-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: none;
+        }
+
+        .chart-section {
+            margin-bottom: 40px;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 1px solid #e9ecef;
+        }
+
+        .chart-title {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .chart-controls {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .share-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s ease;
+        }
+
+        .share-btn:hover {
+            background: #0056b3;
+        }
+
+        .chart {
+            height: 500px;
+            width: 100%;
+            margin: 20px 0;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+        }
+
+        .range-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .range-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .range-box:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+        }
+
+        .range-box label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #495057;
+            cursor: pointer;
+        }
+
+        .range-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #6c757d;
+            display: block;
+            margin-top: 5px;
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 10px 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .theme-toggle:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+        }
+
+        .theme-toggle span {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+            }
+
+            .winrate-header {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+
+            .winrate-content {
+                grid-template-columns: 1fr;
+            }
+
+            .winrate-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+                padding: 8px 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="theme-toggle">
+        <span>🌓 Switch to Dark Theme</span>
+    </div>
+
+    <div class="header">
+        <h1>📊 MNQ Futures Charts - White Theme</h1>
+        <p>Micro Nasdaq Futures - Multi-Timeframe Analysis with Range Markers</p>
+        <p style="margin-top: 10px; font-size: 14px; color: #6c757d;">
+            <a href="/" style="color: #007bff; text-decoration: none;">← Back to Dark Theme</a>
+        </p>
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label for="date">Trading Date:</label>
+            <input type="date" id="date">
+        </div>
+        <button onclick="generateCharts()" id="generateBtn">Generate Charts</button>
+        <button onclick="exportAllCharts()" id="exportBtn">Export All Charts</button>
+        <button onclick="openWidgetModal()" id="widgetBtn">Create Widget</button>
+    </div>
+
+    <div id="error" class="error" style="display: none;"></div>
+    <div id="loading" class="loading" style="display: none;">Loading...</div>
+
+    <!-- Winrate Analysis Section -->
+    <div id="winrateSection" class="winrate-section" style="display: none;">
+        <div class="winrate-header">
+            <h3>📈 First Candle Strategy Performance</h3>
+            <button onclick="refreshWinrate()" class="refresh-btn">🔄 Refresh</button>
+        </div>
+        <div id="winrateContent" class="winrate-content">
+            <div class="winrate-loading">Loading winrate data...</div>
+        </div>
+    </div>
+
+    <div class="charts-container" id="chartsContainer" style="display: none;">
+        <div class="chart-section">
+            <div class="chart-title">30-Second Chart</div>
+            <div class="chart-controls">
+                <button class="share-btn" onclick="openShareModal('30s')">Share & Embed</button>
+            </div>
+            <div class="range-info">
+                <div class="range-box range-first">
+                    <label>
+                        <input type="checkbox" id="showFirst-30s" checked> First 30s Range
+                    </label>
+                    <span id="rangeFirst-30s" class="range-value">-</span>
+                </div>
+                <div class="range-box range-5min">
+                    <label>
+                        <input type="checkbox" id="show5min-30s" checked> 5 Minute Range
+                    </label>
+                    <span id="range5min-30s" class="range-value">-</span>
+                </div>
+                <div class="range-box range-15min">
+                    <label>
+                        <input type="checkbox" id="show15min-30s" checked> 15 Minute Range
+                    </label>
+                    <span id="range15min-30s" class="range-value">-</span>
+                </div>
+            </div>
+            <div id="chart-30s" class="chart"></div>
+        </div>
+
+        <div class="chart-section">
+            <div class="chart-title">5-Minute Chart</div>
+            <div class="chart-controls">
+                <button class="share-btn" onclick="openShareModal('5m')">Share & Embed</button>
+            </div>
+            <div class="range-info">
+                <div class="range-box range-first">
+                    <label>
+                        <input type="checkbox" id="showFirst-5m" checked> First 30s Range
+                    </label>
+                    <span id="rangeFirst-5m" class="range-value">-</span>
+                </div>
+                <div class="range-box range-5min">
+                    <label>
+                        <input type="checkbox" id="show5min-5m" checked> 5 Minute Range
+                    </label>
+                    <span id="range5min-5m" class="range-value">-</span>
+                </div>
+                <div class="range-box range-15min">
+                    <label>
+                        <input type="checkbox" id="show15min-5m" checked> 15 Minute Range
+                    </label>
+                    <span id="range15min-5m" class="range-value">-</span>
+                </div>
+            </div>
+            <div id="chart-5m" class="chart"></div>
+        </div>
+
+        <div class="chart-section">
+            <div class="chart-title">15-Minute Chart</div>
+            <div class="chart-controls">
+                <button class="share-btn" onclick="openShareModal('15m')">Share & Embed</button>
+            </div>
+            <div class="range-info">
+                <div class="range-box range-first">
+                    <label>
+                        <input type="checkbox" id="showFirst-15m" checked> First 30s Range
+                    </label>
+                    <span id="rangeFirst-15m" class="range-value">-</span>
+                </div>
+                <div class="range-box range-5min">
+                    <label>
+                        <input type="checkbox" id="show5min-15m" checked> 5 Minute Range
+                    </label>
+                    <span id="range5min-15m" class="range-value">-</span>
+                </div>
+                <div class="range-box range-15min">
+                    <label>
+                        <input type="checkbox" id="show15min-15m" checked> 15 Minute Range
+                    </label>
+                    <span id="range15min-15m" class="range-value">-</span>
+                </div>
+            </div>
+            <div id="chart-15m" class="chart"></div>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="shareModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeShareModal()">&times;</span>
+            <h2>Share & Embed Chart</h2>
+            <div class="tabs">
+                <button class="tab-btn active" onclick="showTab('download')">📥 Download</button>
+                <button class="tab-btn" onclick="showTab('embed')">🔗 Embed</button>
+            </div>
+            <div id="downloadTab" class="tab-content">
+                <h3>Download Chart as PNG</h3>
+                <p>Right-click the chart and select "Save as image", or use the button below:</p>
+                <button onclick="downloadChart()">Download PNG</button>
+                <h3>Export All Charts</h3>
+                <button onclick="exportAllCharts()">Export All as PNG</button>
+            </div>
+            <div id="embedTab" class="tab-content" style="display: none;">
+                <h3>Embed Code</h3>
+                <textarea id="embedCode" readonly style="width: 100%; height: 100px; font-family: monospace;"></textarea>
+                <button onclick="copyEmbedCode()">Copy Code</button>
+                <h3>Widget Embed</h3>
+                <button onclick="openWidgetModal()">Create Advanced Widget</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Widget Modal -->
+    <div id="widgetModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeWidgetModal()">&times;</span>
+            <h2>Create Widget</h2>
+            <div class="widget-options">
+                <label>
+                    Layout:
+                    <select id="widgetLayout">
+                        <option value="side-by-side">Side by Side</option>
+                        <option value="stacked">Stacked</option>
+                    </select>
+                </label>
+                <label>
+                    Theme:
+                    <select id="widgetTheme">
+                        <option value="dark">Dark Theme</option>
+                        <option value="light">Light Theme</option>
+                    </select>
+                </label>
+            </div>
+            <div id="widgetPreview"></div>
+            <button onclick="generateWidget()">Generate Widget</button>
+        </div>
+    </div>
+
+    <script>
+        // Theme toggle functionality
+        function toggleTheme() {
+            const currentUrl = window.location.pathname;
+            if (currentUrl.includes('/white-theme')) {
+                window.location.href = '/';
+            } else {
+                window.location.href = '/white-theme';
+            }
+        }
+
+        // Add click handler to theme toggle
+        document.querySelector('.theme-toggle').addEventListener('click', toggleTheme);
+
+        // Show/hide loading
+        function showLoading(show) {
+            const loadingEl = document.getElementById('loading');
+            loadingEl.style.display = show ? 'block' : 'none';
+        }
+
+        // Show error message
+        function showError(message) {
+            const errorEl = document.getElementById('error');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+        }
+
+        // Hide error message
+        function hideError() {
+            document.getElementById('error').style.display = 'none';
+        }
+
+        // Generate charts function
+        async function generateCharts() {
+            showLoading(true);
+            hideError();
+
+            const dateValue = document.getElementById('date').value;
+            const dateParam = dateValue ? `?date=${dateValue}` : '';
+
+            try {
+                const response = await fetch(`/api/mnq-data${dateParam}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Generate charts for each timeframe
+                const timeframes = [
+                    { id: '30s', label: '30-Second Chart' },
+                    { id: '5m', label: '5-Minute Chart' },
+                    { id: '15m', label: '15-Minute Chart' }
+                ];
+
+                for (const timeframe of timeframes) {
+                    const chartData = data.data[timeframe.id] || [];
+                    // Calculate ranges from data instead of expecting from backend
+                    let ranges;
+                    try {
+                        ranges = calculateRanges(data.data);
+                        console.log('Ranges calculated successfully:', ranges);
+                    } catch (error) {
+                        console.error('Error calculating ranges:', error);
+                        ranges = createDefaultRanges();
+                    }
+
+                    // Defensive: Ensure ranges is valid
+                    if (!ranges || typeof ranges !== 'object') {
+                        console.warn('Invalid ranges object, using defaults');
+                        ranges = createDefaultRanges();
+                    }
+
+                    if (chartData.length > 0) {
+                        createChart(`chart-${timeframe.id}`, chartData, ranges, timeframe.id);
+                        updateRangeInfo(ranges, timeframe.id);
+                    }
+                }
+
+                // Show the charts container after successful generation
+                document.getElementById('chartsContainer').style.display = 'block';
+
+                // Show and load winrate data
+                document.getElementById('winrateSection').style.display = 'block';
+                loadWinrateData();
+
+            } catch (error) {
+                showError(`Error: ${error.message}`);
+            } finally {
+                showLoading(false);
+                document.getElementById('generateBtn').disabled = false;
+            }
+        }
+
+        // Winrate Functions
+        async function loadWinrateData() {
+            try {
+                const response = await fetch('/api/winrate');
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                displayWinrateData(data);
+            } catch (error) {
+                document.getElementById('winrateContent').innerHTML =
+                    `<div class="winrate-loading" style="color: #dc3545;">Error loading winrate data: ${error.message}</div>`;
+            }
+        }
+
+        function refreshWinrate() {
+            document.getElementById('winrateContent').innerHTML =
+                '<div class="winrate-loading">Refreshing winrate data...</div>';
+            loadWinrateData();
+        }
+
+        function displayWinrateData(data) {
+            const winrateClass = data.overall_winrate >= 50 ? 'good' : 'bad';
+            const overallColor = data.overall_winrate >= 50 ? '#28a745' : '#dc3545';
+
+            let html = `
+                <div class="winrate-overall">
+                    <h4>Overall Win Rate (7 Days)</h4>
+                    <div class="winrate-percentage ${winrateClass}" style="color: ${overallColor};">
+                        ${data.overall_winrate}%
+                    </div>
+                    <div class="winrate-stats">
+                        <div class="winrate-stat">
+                            <span class="winrate-stat-value">${data.total_days}</span>
+                            <span class="winrate-stat-label">Days</span>
+                        </div>
+                        <div class="winrate-stat">
+                            <span class="winrate-stat-value">${data.winning_days}</span>
+                            <span class="winrate-stat-label">Winning Days</span>
+                        </div>
+                        <div class="winrate-stat">
+                            <span class="winrate-stat-value">${data.total_wins}</span>
+                            <span class="winrate-stat-label">Total Wins</span>
+                        </div>
+                        <div class="winrate-stat">
+                            <span class="winrate-stat-value">${data.total_losses}</span>
+                            <span class="winrate-stat-label">Total Losses</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add daily breakdown
+            if (data.daily_breakdown && data.daily_breakdown.length > 0) {
+                html += '<div class="daily-breakdown"><h4>Daily Performance</h4>';
+
+                data.daily_breakdown.forEach(day => {
+                    const badgeClass = day.winrate >= 50 ? 'good' : (day.winrate > 45 ? 'neutral' : 'bad');
+                    const candleIcon = day.first_candle.direction === 'up' ? '📈' : '📉';
+
+                    html += `
+                        <div class="daily-winrate-item">
+                            <div>
+                                <span class="daily-date">${day.date}</span>
+                                <span class="daily-candle">${candleIcon} ${day.first_candle.range.toFixed(2)}</span>
+                            </div>
+                            <div class="daily-stats">
+                                <span class="winrate-badge ${badgeClass}">${day.winrate}%</span>
+                                <span class="winrate-trades">${day.trades} trades</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+            }
+
+            document.getElementById('winrateContent').innerHTML = html;
+        }
+
+        // Update range info for specific timeframe
+        function updateRangeInfo(ranges, timeframe) {
+            if (!ranges || !ranges['first']) return;
+
+            const rangeFirstText = `${ranges['first'].low} - ${ranges['first'].high} (Range: ${ranges['first'].range})`;
+            const range5minText = `${ranges['5min'].low} - ${ranges['5min'].high} (Range: ${ranges['5min'].range})`;
+            const range15minText = `${ranges['15min'].low} - ${ranges['15min'].high} (Range: ${ranges['15min'].range})`;
+
+            // Update specific chart
+            if (document.getElementById(`rangeFirst-${timeframe}`)) {
+                document.getElementById(`rangeFirst-${timeframe}`).textContent = rangeFirstText;
+            }
+            if (document.getElementById(`range5min-${timeframe}`)) {
+                document.getElementById(`range5min-${timeframe}`).textContent = range5minText;
+            }
+            if (document.getElementById(`range15min-${timeframe}`)) {
+                document.getElementById(`range15min-${timeframe}`).textContent = range15minText;
+            }
+        }
+
+        // Create chart with white theme styling
+        function createChart(elementId, candleData, ranges, timeframe) {
+            if (!candleData || candleData.length === 0) {
+                document.getElementById(elementId).innerHTML = '<div style="text-align: center; padding: 50px; color: #6c757d;">No data available</div>';
+                return;
+            }
+
+            // Convert timestamps to Pacific time for display
+            const times = candleData.map(c => {
+                const date = new Date(c.timestamp);
+                return date;
+            });
+            const opens = candleData.map(c => c.open);
+            const highs = candleData.map(c => c.high);
+            const lows = candleData.map(c => c.low);
+            const closes = candleData.map(c => c.close);
+            const volumes = candleData.map(c => c.volume);
+
+            // Determine first candle color for indicators
+            const firstCandleClose = closes[0];
+            const firstCandleOpen = opens[0];
+            const isFirstCandleGreen = firstCandleClose >= firstCandleOpen;
+
+            const candlestickTrace = {
+                x: times,
+                open: opens,
+                high: highs,
+                low: lows,
+                close: closes,
+                type: 'candlestick',
+                name: 'MNQ',
+                increasing: {line: {color: '#28a745'}},
+                decreasing: {line: {color: '#dc3545'}},
+                showlegend: true,
+                visible: true
+            };
+
+            // Create volume trace for main chart only
+            const volumeTrace = {
+                x: times,
+                y: volumes,
+                type: 'bar',
+                name: 'Volume',
+                marker: {
+                    color: volumes.map((vol, i) => {
+                        return closes[i] >= opens[i] ? '#28a745' : '#dc3545';
+                    }),
+                    opacity: 0.2
+                },
+                yaxis: 'y2',
+                xaxis: 'x',
+                showlegend: true
+            };
+
+            // Create a faint candlestick trace specifically for the rangeslider
+            const sliderCandlestickTrace = {
+                x: times,
+                open: opens,
+                high: highs,
+                low: lows,
+                close: closes,
+                type: 'candlestick',
+                name: 'Slider Candles',
+                increasing: {line: {color: 'rgba(40, 167, 69, 0.05)'}},
+                decreasing: {line: {color: 'rgba(220, 53, 69, 0.05)'}},
+                showlegend: false,
+                visible: 'legendonly'
+            };
+
+            // Add range lines based on toggle states
+            const shapes = [];
+            const annotations = [];
+
+            // Check toggle states for this specific chart
+            const showFirst = document.getElementById(`showFirst-${timeframe}`)?.checked ?? true;
+            const show5min = document.getElementById(`show5min-${timeframe}`)?.checked ?? true;
+            const show15min = document.getElementById(`show15min-${timeframe}`)?.checked ?? true;
+
+            // Defensive: Create safe range access variables
+            const firstRange = ranges && ranges['first'] ? ranges['first'] : { high: 0, low: 0, range: '0' };
+            const fiveMinRange = ranges && ranges['5min'] ? ranges['5min'] : { high: 0, low: 0, range: '0' };
+            const fifteenMinRange = ranges && ranges['15min'] ? ranges['15min'] : { high: 0, low: 0, range: '0' };
+
+            // First 30s candle range - show across the entire chart
+            if (showFirst && ranges && ranges['first'] && ranges['first'].high > 0) {
+                shapes.push(
+                    {
+                        type: 'line',
+                        x0: times[0],
+                        x1: times[times.length - 1],
+                        y0: ranges['first'].high,
+                        y1: ranges['first'].high,
+                        line: {color: '#dc3545', width: 3, dash: 'solid'}
+                    },
+                    {
+                        type: 'line',
+                        x0: times[0],
+                        x1: times[times.length - 1],
+                        y0: ranges['first'].low,
+                        y1: ranges['first'].low,
+                        line: {color: '#dc3545', width: 3, dash: 'solid'}
+                    }
+                );
+                // Left side annotation
+                annotations.push({
+                    x: 0.02,
+                    y: 0.98,
+                    xref: 'paper',
+                    yref: 'paper',
+                    text: `First 30s: ${ranges['first'].low}-${ranges['first'].high} (Range: ${ranges['first'].range})`,
+                    showarrow: false,
+                    font: {color: isFirstCandleGreen ? '#28a745' : '#dc3545', size: 14, weight: 'bold'},
+                    xanchor: 'left',
+                    yanchor: 'top',
+                    bgcolor: 'rgba(248, 249, 250, 0.8)',
+                    bordercolor: isFirstCandleGreen ? '#28a745' : '#dc3545',
+                    borderwidth: 1,
+                    borderpad: 4
+                });
+            }
+
+            // 5-minute range lines
+            if (show5min && fiveMinRange.high > 0) {
+                shapes.push(
+                    {
+                        type: 'line',
+                        x0: times[0],
+                        x1: times[times.length - 1],
+                        y0: fiveMinRange.high,
+                        y1: fiveMinRange.high,
+                        line: {color: '#ffc107', width: 2, dash: 'solid'}
+                    },
+                    {
+                        type: 'line',
+                        x0: times[0],
+                        x1: times[times.length - 1],
+                        y0: fiveMinRange.low,
+                        y1: fiveMinRange.low,
+                        line: {color: '#ffc107', width: 2, dash: 'solid'}
+                    }
+                );
+                // Left side annotation
+                annotations.push({
+                    x: 0.02,
+                    y: 0.02,
+                    xref: 'paper',
+                    yref: 'paper',
+                    text: `5min: ${ranges['5min'].low}-${ranges['5min'].high} (Range: ${ranges['5min'].range})`,
+                    showarrow: false,
+                    font: {color: '#663300', size: 14, weight: 'bold'},
+                    xanchor: 'left',
+                    yanchor: 'bottom',
+                    bgcolor: 'rgba(248, 249, 250, 0.8)',
+                    bordercolor: '#ffc107',
+                    borderwidth: 1,
+                    borderpad: 4
+                });
+            }
+
+            // 15-minute range lines
+            if (show15min && fifteenMinRange.high > 0) {
+                shapes.push(
+                    {
+                        type: 'line',
+                        x0: times[0],
+                        x1: times[times.length - 1],
+                        y0: fifteenMinRange.high,
+                        y1: fifteenMinRange.high,
+                        line: {color: '#6f42c1', width: 2, dash: 'solid'}
+                    },
+                    {
+                        type: 'line',
+                        x0: times[0],
+                        x1: times[times.length - 1],
+                        y0: fifteenMinRange.low,
+                        y1: fifteenMinRange.low,
+                        line: {color: '#6f42c1', width: 2, dash: 'solid'}
+                    }
+                );
+                // Left side annotation
+                annotations.push({
+                    x: 0.02,
+                    y: 0.06,
+                    xref: 'paper',
+                    yref: 'paper',
+                    text: `15min: ${ranges['15min'].low}-${ranges['15min'].high} (Range: ${ranges['15min'].range})`,
+                    showarrow: false,
+                    font: {color: '#6f42c1', size: 14, weight: 'bold'},
+                    xanchor: 'left',
+                    yanchor: 'top',
+                    bgcolor: 'rgba(248, 249, 250, 0.8)',
+                    bordercolor: '#6f42c1',
+                    borderwidth: 1,
+                    borderpad: 4
+                });
+            }
+
+            // White theme layout configuration
+            const layout = {
+                title: `MNQ Futures - ${timeframe.toUpperCase()} (${document.getElementById('date').value || new Date().toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'})} PT)`,
+                titlefont: {color: '#2c3e50', size: 14},
+                paper_bgcolor: '#ffffff',
+                plot_bgcolor: '#ffffff',
+                font: {color: '#2c3e50'},
+                xaxis: {
+                    rangeslider: {
+                        visible: true,
+                        yaxis: {rangemode: 'normal'},
+                        bgcolor: 'rgba(233, 236, 239, 0.7)',
+                        bordercolor: '#adb5bd',
+                        borderwidth: 1
+                    },
+                    gridcolor: '#e9ecef',
+                    type: 'date',
+                    tickformat: '%H:%M', // Show time in HH:MM format
+                    tickfont: {color: '#495057', size: 9},
+                    showgrid: true,
+                    dtick: 3600000, // Tick every hour
+                    tick0: '06:30' // Start at 6:30 AM
+                },
+                yaxis: {
+                    gridcolor: '#e9ecef',
+                    tickfont: {color: '#495057', size: 10},
+                    showgrid: true,
+                    autorange: true
+                },
+                yaxis2: {
+                    title: 'Volume',
+                    titlefont: {color: '#495057', size: 12},
+                    tickfont: {color: '#495757', size: 10},
+                    overlaying: 'y',
+                    side: 'right',
+                    showgrid: false,
+                    autorange: true
+                },
+                margin: {t: 50, r: 20, b: 60, l: 70}, // Increased top margin for title
+                shapes: shapes,
+                annotations: annotations
+            };
+
+            const config = {
+                responsive: true,
+                displayModeBar: true,
+                modeBarButtonsToRemove: ['toImage', 'sendDataToCloud', 'editInChartStudio', 'lasso2d', 'select2d'],
+                displaylogo: false,
+                scrollZoom: true
+            };
+
+            Plotly.newPlot(elementId, [candlestickTrace, volumeTrace, sliderCandlestickTrace], layout, config);
+
+            // Force a redraw to ensure proper sizing
+            setTimeout(() => {
+                Plotly.Plots.resize(elementId);
+            }, 100);
+        }
+
+        // Export all charts functionality
+        function exportAllCharts() {
+            try {
+                // Create export container
+                const exportContainer = document.createElement('div');
+                exportContainer.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: white;
+                    z-index: 10000;
+                    overflow-y: auto;
+                    padding: 20px;
+                    box-sizing: border-box;
+                `;
+
+                // Add title
+                const title = document.createElement('h1');
+                title.textContent = 'MNQ Futures Chart Export';
+                title.style.cssText = 'text-align: center; color: #2c3e50; margin: 20px 0;';
+                exportContainer.appendChild(title);
+
+                // Add charts
+                const chartIds = ['chart-30s', 'chart-5m', 'chart-15m'];
+                const titles = ['30-Second Chart', '5-Minute Chart', '15-Minute Chart'];
+
+                for (let i = 0; i < chartIds.length; i++) {
+                    const chartSection = document.createElement('div');
+                    chartSection.style.cssText = `
+                        margin-bottom: 30px;
+                        padding: 20px;
+                        border: 1px solid #dee2e6;
+                        border-radius: 8px;
+                        background: white;
+                    `;
+
+                    const chartTitle = document.createElement('h3');
+                    chartTitle.textContent = titles[i];
+                    chartTitle.style.cssText = 'color: #2c3e50; text-align: center; margin: 15px 0; font-size: 18px;';
+                    chartSection.appendChild(chartTitle);
+
+                    // Clone the chart
+                    const chartElement = document.getElementById(chartIds[i]);
+                    const chartClone = chartElement.cloneNode(true);
+                    chartClone.style.cssText = 'height: 400px; width: 100%; background: white;';
+                    chartSection.appendChild(chartClone);
+
+                    exportContainer.appendChild(chartSection);
+                }
+
+                // Add export instructions
+                const instructions = document.createElement('div');
+                instructions.innerHTML = `
+                    <p style="color: #6c757d; text-align: center; margin-top: 30px;">
+                        Use your browser's print function (Cmd+P or Ctrl+P) to save as PDF, or take screenshots
+                    </p>
+                    <button onclick="this.parentElement.parentElement.remove()" style="
+                        display: block;
+                        margin: 20px auto;
+                        padding: 10px 20px;
+                        background: #dc3545;
+                        color: white;
+                        border: none;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 16px;
+                    ">Close Export View</button>
+                `;
+                exportContainer.appendChild(instructions);
+
+                document.body.appendChild(exportContainer);
+
+                // Redraw charts in the new container
+                for (let i = 0; i < chartIds.length; i++) {
+                    const chartClone = exportContainer.querySelectorAll('.plotly')[i];
+                    if (window.Plotly && chartClone) {
+                        // This will require re-plotting with white background
+                        // For now, the clone should work for screenshots
+                    }
+                }
+
+            } catch (error) {
+                showError('Export failed: ' + error.message);
+            }
+        }
+
+        // Share functionality
+        function openShareModal(timeframe) {
+            const modal = document.getElementById('shareModal');
+            modal.style.display = 'block';
+            showTab('download');
+        }
+
+        function closeShareModal() {
+            document.getElementById('shareModal').style.display = 'none';
+        }
+
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+
+            // Show selected tab
+            document.getElementById(tabName + 'Tab').style.display = 'block';
+            event.target.classList.add('active');
+        }
+
+        // Widget functionality
+        function openWidgetModal() {
+            const modal = document.getElementById('widgetModal');
+            modal.style.display = 'block';
+            generateWidgetPreview();
+        }
+
+        function closeWidgetModal() {
+            document.getElementById('widgetModal').style.display = 'none';
+        }
+
+        function generateWidgetPreview() {
+            const layout = document.getElementById('widgetLayout').value;
+            const theme = document.getElementById('widgetTheme').value;
+            const preview = document.getElementById('widgetPreview');
+
+            const html = `
+                <div style="background: ${theme === 'dark' ? '#1a1a1a' : '#ffffff'}; padding: 15px; border-radius: 8px; max-width: 400px;">
+                    <h4 style="color: ${theme === 'dark' ? '#ffffff' : '#2c3e50'};">Widget Preview</h4>
+                    <p style="color: ${theme === 'dark' ? '#b0b0b0' : '#6c757d'};">Layout: ${layout}</p>
+                    <p style="color: ${theme === 'dark' ? '#b0b0b0' : '#6c757d'};">Theme: ${theme}</p>
+                </div>
+            `;
+
+            preview.innerHTML = html;
+        }
+
+        function generateWidget() {
+            const layout = document.getElementById('widgetLayout').value;
+            const theme = document.getElementById('widgetTheme').value;
+
+            // Create widget HTML based on layout and theme
+            const widgetHtml = createWidgetHtml(layout, theme);
+
+            // Create blob and download
+            const blob = new Blob([widgetHtml], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'mnq-widget.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            closeWidgetModal();
+        }
+
+        function createWidgetHtml(layout, theme) {
+            const themeColors = theme === 'dark' ? {
+                bg: '#1a1a1a',
+                text: '#ffffff',
+                border: '#444',
+                header: '#2a2a2a'
+            } : {
+                bg: '#ffffff',
+                text: '#2c3e50',
+                border: '#dee2e6',
+                header: '#f8f9fa'
+            };
+
+            return `<!DOCTYPE html>
+<html>
+<head>
+    <title>MNQ Futures Widget</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.plot.ly/plotly-2.33.0.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: ${themeColors.bg};
+            color: ${themeColors.text};
+            min-height: 100vh;
+        }
+        .widget-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            ${layout === 'side-by-side' ? 'display: grid; grid-template-columns: 1fr 1fr; gap: 20px;' : ''}
+        }
+        .chart-wrapper {
+            background: ${themeColors.header};
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 1px solid ${themeColors.border};
+        }
+        .chart-title {
+            color: ${themeColors.text};
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .chart {
+            height: 300px;
+            border-radius: 4px;
+        }
+        .range-info {
+            display: flex;
+            gap: 10px;
+            font-size: 12px;
+            color: ${themeColors.text};
+        }
+        .range-item {
+            padding: 5px;
+            background: ${themeColors.header};
+            border-radius: 4px;
+            text-align: center;
+        }
+        .theme-footer {
+            text-align: center;
+            padding: 10px;
+            font-size: 12px;
+            color: ${themeColors.text};
+            border-top: 1px solid ${themeColors.border};
+        }
+    </style>
+</head>
+<body>
+    <div class="widget-container">
+        <div class="chart-wrapper">
+            <div class="chart-title">30-Second Chart</div>
+            <div id="widget-chart-30s" class="chart"></div>
+            <div class="range-info">
+                <div class="range-item">First 30s Range</div>
+            </div>
+        </div>
+        <div class="chart-wrapper">
+            <div class="chart-title">5-Minute Chart</div>
+            <div id="widget-chart-5m" class="chart"></div>
+            <div class="range-info">
+                <div class="range-item">First 30s Range</div>
+                <div class="range-item">5 Minute Range</div>
+            </div>
+        </div>
+        <div class="chart-wrapper">
+            <div class="chart-title">15-Minute Chart</div>
+            <div id="widget-chart-15m" class="chart"></div>
+            <div class="range-info">
+                <div class="range-item">First 30s Range</div>
+                <div class="range-item">5 Minute Range</div>
+                <div class="range-item">15 Minute Range</div>
+            </div>
+        </div>
+    </div>
+    <div class="theme-footer">
+        <p>Generated: ${new Date().toLocaleDateString()}</p>
+    </div>
+
+    <script>
+        function downloadChart() {
+            // Placeholder for individual chart download
+            alert('Right-click on the chart and select "Save as image", or use "Print" from browser menu');
+        }
+
+        function copyEmbedCode() {
+            const embedCode = document.getElementById('embedCode');
+            embedCode.select();
+            document.execCommand('copy');
+            embedCode.blur();
+            alert('Embed code copied to clipboard!');
+        }
+
+        // Range box click handler
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.range-box').forEach(box => {
+                box.addEventListener('click', function() {
+                    const checkbox = this.querySelector('input[type="checkbox"]');
+                    if (checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+    ''')
 
 # Vercel serverless handler for builds system
 def handler(environ, start_response):
